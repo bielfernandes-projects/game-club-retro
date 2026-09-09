@@ -284,10 +284,9 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       <tbody id="s-rows">${items.map(row).join("")}</tbody>
     </table></div>
     <h2 class="section">Novo item</h2>
-    <p class="sub" style="margin:0 0 8px">Só o <b>nome</b> é obrigatório. Cole um <b>link da Shopee</b> pra puxar tudo, ou preencha um <b>termo de busca</b>, ou os campos na mão. O que você digitar aqui manda por cima do que a Shopee devolver.</p>
+    <p class="sub" style="margin:0 0 8px">Só o <b>nome</b> é obrigatório. Cole um <b>link da Shopee</b> pra puxar foto/preço/etc, ou preencha os campos na mão. O que você digitar aqui manda por cima do que a Shopee devolver. (O "termo de busca" pra atualização automática dá pra pôr depois, na linha da tabela.)</p>
     <div class="form-grid">
       <label>nome no card *<input id="s-label" placeholder="ex: Console R36S"></label>
-      <label>termo de busca na Shopee<input id="s-kw" placeholder="ex: Console R36S"></label>
       <label style="grid-column:1/-1">link do produto na Shopee<input id="s-link" placeholder="https://shopee.com.br/... ou https://s.shopee.com.br/..."></label>
       <label>preço<input id="s-price" placeholder="R$ 0,00"></label>
       <label>nota (0–5)<input id="s-rating" type="number" step="0.1" min="0" max="5"></label>
@@ -412,7 +411,6 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       showErr("Dá um nome pro card.");
       return;
     }
-    const keyword = val("s-kw");
     const prodLink = val("s-link");
     for (const [id, name] of [["s-link", "link do produto"], ["s-img", "url da imagem"], ["s-url", "link de afiliado"]] as const) {
       const v = val(id);
@@ -425,10 +423,9 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
     btn.disabled = true;
     btn.textContent = "salvando…";
     try {
-      // 1) base: link colado > termo de busca (só se não deu nada manual pra url)
+      // 1) base: se colou um link, puxa da Shopee
       let base: Partial<StoreItem> = {};
       if (prodLink) base = offerPatch(await fetchShopeeProduct({ url: prodLink }).catch(() => null));
-      else if (keyword && !val("s-url")) base = offerPatch(await fetchShopeeProduct({ keyword }).catch(() => null));
       if (Object.keys(base).length) base.refreshed_at = new Date().toISOString();
       // 2) overrides manuais (só o que foi digitado)
       const man: Partial<StoreItem> = {};
@@ -439,7 +436,6 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       if (val("s-url")) man.url = val("s-url");
       await upsertStoreItem({
         label,
-        keyword: keyword || null,
         sort_order: items.length,
         ...base,
         ...man,
