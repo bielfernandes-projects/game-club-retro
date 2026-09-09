@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game Club Retrô — Sorteador do Mês</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #08080b;
+    --panel: #101017;
+    --panel-2: #15151f;
+    --line: #24242f;
+    --text: #ededf2;
+    --muted: #8b8b99;
+    --amber: #ffc53d;
+    --magenta: #ff2e88;
+    --cyan: #35e0f0;
+    --green: #46d17b;
+    --radius: 18px;
+    --maxw: 960px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  [hidden] { display: none !important; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Chakra Petch", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    position: relative;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- Ambient background ---------- */
+  .bg-glow {
+    position: fixed; inset: -30vmax; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(38vmax 38vmax at 22% 18%, rgba(255,46,136,0.15), transparent 60%),
+      radial-gradient(42vmax 42vmax at 82% 12%, rgba(53,224,240,0.12), transparent 60%),
+      radial-gradient(50vmax 40vmax at 50% 108%, rgba(255,197,61,0.11), transparent 60%);
+    animation: drift 22s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(-2%, -1%, 0) scale(1); }
+    to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
+  }
+  .bg-grid {
+    position: fixed; left: 50%; bottom: 0; width: 220vw; height: 46vh; z-index: 0; pointer-events: none;
+    transform: translateX(-50%) perspective(60vh) rotateX(72deg); transform-origin: bottom center;
+    background-image:
+      linear-gradient(rgba(255,46,136,0.20) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(53,224,240,0.14) 1px, transparent 1px);
+    background-size: 5vw 5vw;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 82%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 82%);
+    opacity: 0.5;
+  }
+  .bg-scan {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0px, rgba(255,255,255,0.022) 1px, transparent 2px, transparent 4px);
+    mix-blend-mode: overlay;
+  }
+  .bg-vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 22vmax rgba(0,0,0,0.85); }
+
+  /* ---------- Layout ---------- */
+  .wrap {
+    position: relative; z-index: 2; width: 100%; max-width: var(--maxw); margin: 0 auto;
+    padding: clamp(28px, 6vw, 60px) clamp(18px, 5vw, 40px) 48px;
+    flex: 1; display: flex; flex-direction: column;
+  }
+
+  header { text-align: center; }
+  .kicker {
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(9px, 2.4vw, 12px); letter-spacing: 2px; color: var(--cyan);
+  }
+  h1 {
+    margin-top: 18px;
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(19px, 6vw, 38px); line-height: 1.35; letter-spacing: 1px;
+    color: var(--amber);
+  }
+  .sub { margin: 18px auto 0; max-width: 52ch; color: var(--muted); font-size: clamp(13px, 2.6vw, 16px); }
+
+  /* ---------- Stage ---------- */
+  .stage { margin-top: clamp(28px, 5vw, 46px); flex: 1; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  .cabinet {
+    width: 100%;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+    overflow: hidden;
+  }
+  .screen {
+    position: relative; padding: clamp(22px, 5vw, 40px) clamp(18px, 4.5vw, 40px);
+    min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(120% 100% at 50% 0%, rgba(53,224,240,0.05), transparent 70%);
+  }
+  .screen::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px); opacity: 0.35;
+  }
+
+  .idle-line {
+    font-family: "Press Start 2P", monospace; font-size: clamp(10px, 2.8vw, 14px); color: var(--muted);
+    animation: blink 1.4s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.25; } }
+
+  .result { display: none; width: 100%; }
+  .result.show { display: block; animation: pop 0.5s cubic-bezier(.16,1,.3,1); }
+  @keyframes pop { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .badge {
+    font-family: "Press Start 2P", monospace; font-size: 11px; letter-spacing: 1px;
+    padding: 8px 11px; border-radius: 999px; border: 1px solid currentColor;
+    color: var(--cyan); background: rgba(53,224,240,0.08);
+  }
+  .badge.year { color: var(--amber); background: rgba(255,197,61,0.08); }
+  .badge.seq  { color: var(--magenta); background: rgba(255,46,136,0.08); }
+
+  .game-title {
+    font-family: "Press Start 2P", monospace; font-size: clamp(14px, 4.4vw, 24px); line-height: 1.5;
+    color: #fff; text-shadow: 0 0 24px rgba(255,46,136,0.4); word-break: break-word;
+  }
+  .game-title.rolling { color: var(--magenta); }
+  .pitch { margin: 14px auto 0; max-width: 48ch; color: var(--muted); font-size: clamp(13px, 2.6vw, 15px); }
+
+  /* media */
+  .media {
+    margin: 22px auto 0; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    align-items: flex-start; text-align: left; max-width: 760px;
+  }
+  .cover {
+    flex: 0 0 auto; width: 176px; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--line); background: #0c0c12;
+    min-height: 200px; display: flex; align-items: center; justify-content: center;
+  }
+  .cover img { display: block; width: 100%; height: auto; }
+  .cover .ph {
+    font-family: "Press Start 2P", monospace; font-size: 10px; line-height: 1.9; color: var(--muted);
+    padding: 16px; text-align: center;
+  }
+  .trailer {
+    flex: 1 1 340px; min-width: 260px; position: relative; width: 100%;
+    aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #000;
+  }
+  .trailer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .trailer .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+  .trailer .play-poster {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0; cursor: pointer; padding: 0;
+    background-color: #000; background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .trailer .play-poster::after {
+    content: "▶"; font-size: 24px; color: #fff; padding-left: 4px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(255,46,136,0.88); display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .trailer .play-poster:hover::after { background: var(--magenta); transform: scale(1.08); }
+  .media-fallback { flex-basis: 100%; margin-top: -4px; font-size: 12px; color: var(--muted); text-align: center; }
+  .media-fallback a { color: var(--cyan); }
+
+  /* action links */
+  .links { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 15px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    text-decoration: none; font-size: 14px; font-weight: 600;
+    transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .link-btn:hover { transform: translateY(-2px); border-color: var(--cyan); background: #191924; }
+  .link-btn .ico { font-size: 15px; }
+  .link-btn small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+
+  .commit-row { margin-top: 20px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .commit-btn {
+    font-family: "Press Start 2P", monospace; font-size: 11px; letter-spacing: 1px;
+    color: #06140c; background: linear-gradient(180deg, #7ff0a9, var(--green)); border: none;
+    border-radius: 12px; padding: 15px 20px; cursor: pointer;
+    box-shadow: 0 5px 0 #2b9455;
+    transition: transform 0.1s ease;
+  }
+  .commit-btn:hover { transform: translateY(-2px); }
+  .commit-btn:active { transform: translateY(3px); box-shadow: 0 5px 0 #2b9455; }
+  .committed-msg {
+    font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--green); line-height: 1.7;
+  }
+
+  /* ---------- Main button ---------- */
+  .roll-btn {
+    font-family: "Press Start 2P", monospace; font-size: clamp(12px, 3vw, 15px); letter-spacing: 1px;
+    color: #12040b; background: linear-gradient(180deg, #ffd873, var(--amber));
+    border: none; border-radius: 14px; padding: 20px 30px; cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(255,197,61,0.5), 0 6px 0 #b9861f;
+    transition: transform 0.1s ease;
+  }
+  .roll-btn:hover { transform: translateY(-2px); }
+  .roll-btn:active { transform: translateY(3px); box-shadow: 0 0 0 1px rgba(255,197,61,0.5), 0 3px 0 #b9861f; }
+  .roll-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .toast {
+    min-height: 20px; font-size: 13px; color: var(--magenta); font-weight: 600; text-align: center;
+    transition: opacity 0.3s ease;
+  }
+
+  /* ---------- Played list ---------- */
+  .played-box { width: 100%; margin-top: 8px; }
+  .played-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--muted); margin-bottom: 12px;
+  }
+  .played-head .count { color: var(--amber); }
+  .clear-link { background: none; border: none; color: var(--magenta); cursor: pointer; font: inherit; font-size: 11px; text-decoration: underline; }
+  .played-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .played-list li {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13px;
+  }
+  .played-list .n { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--muted); }
+  .played-list .name { flex: 1; }
+  .played-list .meta { color: var(--muted); font-size: 12px; }
+  .played-list .rm { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; cursor: pointer; width: 26px; height: 26px; font-size: 13px; line-height: 1; }
+  .played-list .rm:hover { color: var(--magenta); border-color: var(--magenta); }
+  .played-empty { color: var(--muted); font-size: 13px; }
+
+  footer { margin-top: 40px; text-align: center; color: var(--muted); font-size: 12px; }
+  footer .rules { opacity: 0.75; }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(4,4,7,0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: fade 0.22s ease;
+  }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    position: relative; width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 20px;
+    padding: 30px 26px 26px; text-align: center;
+    animation: modalpop 0.4s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes modalpop { from { opacity: 0; transform: translateY(20px) scale(.95); } to { opacity: 1; transform: none; } }
+  .modal-x {
+    position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted); cursor: pointer; font-size: 15px;
+  }
+  .modal-x:hover { color: var(--text); border-color: var(--magenta); }
+  .modal-kicker { font-family: "Press Start 2P", monospace; font-size: 11px; letter-spacing: 2px; color: var(--amber); }
+  .modal-cover {
+    margin: 18px auto 16px; width: 230px; max-width: 72%;
+    border-radius: 12px; border: 1px solid var(--line); background: #0c0c12; overflow: hidden;
+    min-height: 130px; display: flex; align-items: center; justify-content: center;
+  }
+  .modal-cover img { display: block; width: 100%; height: auto; }
+  .modal-cover .ph { font-family: "Press Start 2P", monospace; font-size: 10px; color: var(--muted); padding: 34px 12px; line-height: 1.9; }
+  .modal-title { font-family: "Press Start 2P", monospace; font-size: 15px; line-height: 1.55; color: #fff; }
+  .modal-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .modal-pitch { margin-top: 14px; color: var(--muted); font-size: 14px; }
+  .modal-actions { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .modal-close-btn {
+    font-family: "Press Start 2P", monospace; font-size: 11px; letter-spacing: 1px;
+    color: #12040b; background: linear-gradient(180deg, #ffd873, var(--amber));
+    border: none; border-radius: 12px; padding: 14px 24px; cursor: pointer; box-shadow: 0 5px 0 #b9861f;
+    transition: transform 0.1s ease;
+  }
+  .modal-close-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #b9861f; }
+  .modal-undo-btn { background: none; border: none; color: var(--magenta); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+  .confetti-canvas { position: fixed; inset: 0; z-index: 120; pointer-events: none; }
+
+  /* ---------- Catálogo (accordion) ---------- */
+  .catalog {
+    width: 100%; margin-top: 24px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--panel); overflow: hidden;
+  }
+  .catalog > summary {
+    cursor: pointer; padding: 14px 16px; list-style: none;
+    font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  .catalog > summary::-webkit-details-marker { display: none; }
+  .catalog > summary::after { content: "▸"; color: var(--cyan); transition: transform 0.2s ease; }
+  .catalog[open] > summary::after { transform: rotate(90deg); }
+  .catalog > summary:hover { color: var(--text); }
+  .catalog-list { list-style: none; border-top: 1px solid var(--line); max-height: 400px; overflow-y: auto; }
+  .catalog-list li {
+    display: flex; align-items: baseline; gap: 10px; padding: 9px 16px; font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .catalog-list li:last-child { border-bottom: 0; }
+  .cat-mark { flex: 0 0 auto; width: 16px; text-align: center; }
+  .cat-name { flex: 1; }
+  .cat-meta { color: var(--muted); font-size: 11px; text-align: right; white-space: nowrap; }
+  .cat-done .cat-name { color: var(--green); text-decoration: line-through; text-decoration-color: rgba(70,209,123,0.5); }
+  .cat-done .cat-mark { color: var(--green); }
+  .cat-locked { opacity: 0.5; }
+
+  @media (max-width: 520px) {
+    .cover { width: 132px; min-height: 170px; }
+    .media { gap: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bg-glow, .idle-line, .result.show, .modal-backdrop, .modal { animation: none; }
+    .link-btn:hover, .roll-btn:hover, .commit-btn:hover, .trailer .play-poster:hover::after { transform: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-scan"></div>
+  <div class="bg-vignette"></div>
+
+  <main class="wrap">
+    <header>
+      <div class="kicker">GAME CLUB RETRÔ</div>
+      <h1>Sorteador do Mês</h1>
+      <p class="sub">Um clássico incontestável por mês. O sorteio decide.</p>
+    </header>
+
+    <section class="stage">
+      <div class="cabinet">
+        <div class="screen">
+          <div class="idle-line" id="idle">INSIRA UMA FICHA ▸ PRESSIONE SORTEAR</div>
+
+          <div class="result" id="result">
+            <div class="badges">
+              <span class="badge" id="b-console">CONSOLE</span>
+              <span class="badge year" id="b-year">ANO</span>
+              <span class="badge seq" id="b-seq" hidden>SAGA</span>
+            </div>
+            <div class="game-title" id="title">—</div>
+            <p class="pitch" id="pitch"></p>
+
+            <div class="media" id="media">
+              <div class="cover" id="cover"></div>
+              <div class="trailer" id="trailer"></div>
+              <div class="media-fallback" id="media-fallback"></div>
+            </div>
+
+            <div class="links">
+              <a class="link-btn" id="lnk-emu" target="_blank" rel="noopener">
+                <span class="ico">🕹️</span><span>Baixar emulador<small id="emu-name">—</small></span>
+              </a>
+              <a class="link-btn" id="lnk-rom" target="_blank" rel="noopener">
+                <span class="ico">💾</span><span>Baixar ROM<small>busca em PT-BR</small></span>
+              </a>
+            </div>
+
+            <div class="commit-row" id="commit-row">
+              <button class="commit-btn" id="commit">✓ ESCOLHEMOS ESSE</button>
+            </div>
+            <div class="committed-msg" id="committed-msg" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="roll-btn" id="roll">SORTEAR JOGO</button>
+      <div class="toast" id="toast"></div>
+
+      <div class="played-box">
+        <div class="played-head">
+          <span>JÁ JOGAMOS · <span class="count" id="played-count">0</span></span>
+          <button class="clear-link" id="clear" hidden>limpar tudo</button>
+        </div>
+        <ul class="played-list" id="played-list"></ul>
+        <p class="played-empty" id="played-empty">Nada ainda. Sorteiem o primeiro jogo do clube. 🕹️</p>
+      </div>
+
+      <details class="catalog" id="catalog">
+        <summary>
+          <span>LISTA COMPLETA — <span id="cat-count">0</span> JOGOS · <span id="cat-done">0</span> JOGADOS</span>
+        </summary>
+        <ul class="catalog-list" id="catalog-list"></ul>
+      </details>
+
+      <footer>
+        <p class="rules">Curadoria de <span id="pool-total">0</span> clássicos · <span id="pool-open">0</span> liberados pro próximo sorteio · escolhidos não repetem</p>
+      </footer>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-x" id="modal-x" aria-label="Fechar">✕</button>
+      <div class="modal-kicker">🏆 ESCOLHA DO CLUBE</div>
+      <div class="modal-cover" id="modal-cover"></div>
+      <h2 class="modal-title" id="modal-title">—</h2>
+      <div class="modal-badges" id="modal-badges"></div>
+      <p class="modal-pitch" id="modal-pitch"></p>
+      <div class="modal-actions">
+        <button class="modal-close-btn" id="modal-close">BORA JOGAR!</button>
+        <button class="modal-undo-btn" id="modal-undo">desfazer escolha</button>
+      </div>
+    </div>
+  </div>
+  <canvas class="confetti-canvas" id="confetti" hidden></canvas>
+
+<script>
+(() => {
+  "use strict";
+
+  const EMU = {
+    SNES: { name: "Snes9x",      url: "https://www.snes9x.com/",              label: "Super Nintendo (SNES)" },
+    MD:   { name: "BlastEm",     url: "https://www.retrodev.com/blastem/",    label: "Mega Drive / Genesis" },
+    N64:  { name: "Project64",   url: "https://www.pj64-emu.com/",            label: "Nintendo 64" },
+    PS1:  { name: "DuckStation", url: "https://www.duckstation.org/",         label: "PlayStation" },
+    GBA:  { name: "mGBA",        url: "https://mgba.io/",                     label: "Game Boy Advance" },
+    GBC:  { name: "mGBA",        url: "https://mgba.io/",                     label: "Game Boy Color" }
+  };
+
+  // Curadoria: clássicos incontestáveis com campanha / modo história.
+  // series/order = sagas diretas; o nº 2 só entra no sorteio depois que o nº 1 for escolhido.
+  const GAMES = [
+    { id:"chrono-trigger", t:"Chrono Trigger", c:"SNES", y:1995, yt:"8USTC91ckaQ", series:"chrono", order:1,
+      p:"O RPG que quase todo mundo cita como o melhor de todos os tempos." },
+    { id:"chrono-cross", t:"Chrono Cross", c:"PS1", y:1999, yt:"U709nJ_AQ-s", series:"chrono", order:2,
+      p:"Sucessor ambicioso com uma das trilhas sonoras mais bonitas já compostas." },
+
+    { id:"zelda-alttp", t:"The Legend of Zelda: A Link to the Past", c:"SNES", y:1991, yt:"ZsexNXltd2Y",
+      p:"O molde de todo Zelda que veio depois — aventura top-down impecável." },
+    { id:"zelda-oot", t:"The Legend of Zelda: Ocarina of Time", c:"N64", y:1998, yt:"GwKLbjfjpZM",
+      p:"Frequentemente eleito o melhor jogo já feito, sem ironia." },
+    { id:"zelda-mm", t:"The Legend of Zelda: Majora's Mask", c:"N64", y:2000, yt:"AAbKdyUDDfc",
+      p:"Ciclo de três dias, tom sombrio e a ideia mais ousada da série." },
+    { id:"zelda-la", t:"The Legend of Zelda: Link's Awakening DX", c:"GBC", y:1998, yt:"oR46QVM9bcQ",
+      p:"Zelda portátil surreal, afetivo e inesquecível." },
+    { id:"zelda-minish", t:"The Legend of Zelda: The Minish Cap", c:"GBA", y:2004, yt:"0hTrom_OtfE",
+      p:"Link encolhe ao tamanho de um inseto — o Zelda portátil mais charmoso." },
+    { id:"zelda-ages", t:"The Legend of Zelda: Oracle of Ages", c:"GBC", y:2001, yt:"TCWgLBR_N-A",
+      p:"Zelda de viagem no tempo, feito pela Capcom, com puzzle pesado." },
+
+    { id:"ff6", t:"Final Fantasy VI", c:"SNES", y:1994, yt:"j_lr12kgGeU",
+      p:"Elenco enorme, o vilão mais lembrado da série e uma ópera no meio do jogo." },
+    { id:"ff7", t:"Final Fantasy VII", c:"PS1", y:1997, yt:"MGkD6TjS_OI",
+      p:"O RPG que levou o gênero ao mainstream do mundo inteiro." },
+    { id:"ff8", t:"Final Fantasy VIII", c:"PS1", y:1999, yt:"h9e7wdCVPcs",
+      p:"Jovem, estiloso e polêmico — o FF que dividiu os fãs e marcou época." },
+    { id:"ff9", t:"Final Fantasy IX", c:"PS1", y:2000, yt:"oDjplemG3Po",
+      p:"Volta às raízes de fantasia medieval — o favorito de muito fã raiz." },
+    { id:"fft", t:"Final Fantasy Tactics", c:"PS1", y:1997, yt:"Q0xm3Oteai8",
+      p:"Tático sombrio com roteiro de intriga política digno de romance." },
+    { id:"tactics-ogre", t:"Tactics Ogre: Let Us Cling Together", c:"PS1", y:1997, yt:"ayhks2FuKqY",
+      p:"Tático sobre limpeza étnica e escolhas sem volta — a base de Final Fantasy Tactics." },
+
+    { id:"super-metroid", t:"Super Metroid", c:"SNES", y:1994, yt:"87jXoj-4C5U", series:"metroid", order:1,
+      p:"A aula definitiva de level design, atmosfera e exploração." },
+    { id:"metroid-fusion", t:"Metroid Fusion", c:"GBA", y:2002, yt:"kiq4eOUDI2k", series:"metroid", order:2,
+      p:"Samus acuada, guiada e caçada — o Metroid mais linear e tenso." },
+    { id:"metroid-zm", t:"Metroid: Zero Mission", c:"GBA", y:2004, yt:"xjMan14CFeE",
+      p:"Releitura enxuta e brilhante do Metroid original." },
+
+    { id:"sotn", t:"Castlevania: Symphony of the Night", c:"PS1", y:1997, yt:"wDE34DggEw4",
+      p:"Fundou o 'metroidvania' como a gente conhece hoje." },
+    { id:"castlevania-aos", t:"Castlevania: Aria of Sorrow", c:"GBA", y:2003, yt:"ZNCfiBDjUhY",
+      p:"Metroidvania portátil no auge — roube a alma de cada inimigo." },
+
+    { id:"secret-of-mana", t:"Secret of Mana", c:"SNES", y:1993, yt:"CTrawcuaHUM",
+      p:"Action-RPG com co-op local que virou lenda entre amigos." },
+    { id:"earthbound", t:"EarthBound", c:"SNES", y:1994, yt:"-knEvpvmlAI", series:"mother", order:1,
+      p:"Estranho, engraçado e décadas à frente do seu tempo." },
+    { id:"mother3", t:"Mother 3", c:"GBA", y:2006, yt:"sScHQrPJ4FU", series:"mother", order:2,
+      p:"Sequência de EarthBound: engraçada, e aí de repente devastadora." },
+    { id:"terranigma", t:"Terranigma", c:"SNES", y:1995, yt:"1f_vEnlrqyk",
+      p:"Action-RPG cult sobre ressuscitar o mundo, peça por peça." },
+    { id:"illusion-of-gaia", t:"Illusion of Gaia", c:"SNES", y:1994, yt:"o0yB3LJTqNU",
+      p:"Aventura sombria e melancólica sobre crescer no meio do apocalipse." },
+    { id:"lufia2", t:"Lufia II: Rise of the Sinistrals", c:"SNES", y:1995, yt:"WsfZkOIHztU",
+      p:"JRPG cheio de puzzles com uma abertura que já entrega o final. Cult absoluto." },
+
+    { id:"mgs1", t:"Metal Gear Solid", c:"PS1", y:1998, yt:"U3CZK-hO6lM",
+      p:"Stealth cinematográfico que redefiniu o que narrativa em game podia ser." },
+
+    { id:"re1", t:"Resident Evil", c:"PS1", y:1996, yt:"UeyBz1mhPQ4", series:"re", order:1,
+      p:"O jogo que fundou o survival horror e aterrorizou uma geração." },
+    { id:"re2", t:"Resident Evil 2", c:"PS1", y:1998, yt:"PcDjo_uKeF4", series:"re", order:2,
+      p:"O ápice do survival horror clássico, com dois cenários entrelaçados." },
+    { id:"re3", t:"Resident Evil 3: Nemesis", c:"PS1", y:1999, yt:"4wlTtmr7TW8", series:"re", order:3,
+      p:"Raccoon City em chamas e um perseguidor que nunca para." },
+
+    { id:"silent-hill", t:"Silent Hill", c:"PS1", y:1999, yt:"_5mZKe40zDA",
+      p:"Terror psicológico que ainda assombra quem jogou." },
+    { id:"dino-crisis", t:"Dino Crisis", c:"PS1", y:1999, yt:"LV2IuPD8TmI",
+      p:"Resident Evil com dinossauros, feito pelo mesmo time. Tenso do início ao fim." },
+    { id:"parasite-eve", t:"Parasite Eve", c:"PS1", y:1998, yt:"9FBb4DuEmFw", series:"pe", order:1,
+      p:"Survival horror com RPG numa Nova York de pesadelo." },
+    { id:"parasite-eve-2", t:"Parasite Eve II", c:"PS1", y:1999, yt:"Ac-eFW3s-nA", series:"pe", order:2,
+      p:"Menos RPG, mais ação — survival horror puro." },
+
+    { id:"xenogears", t:"Xenogears", c:"PS1", y:1998, yt:"FT2Q10vNoPE",
+      p:"RPG filosófico, denso e profundamente cultuado." },
+    { id:"vagrant-story", t:"Vagrant Story", c:"PS1", y:2000, yt:"lBvFP2SIzhk",
+      p:"Ação-RPG sombrio com uma profundidade de sistemas quase absurda." },
+    { id:"grandia", t:"Grandia", c:"PS1", y:1997, yt:"YB7JEtniTd0",
+      p:"Sistema de batalha ainda copiado hoje; aventura leve e carismática." },
+    { id:"legend-dragoon", t:"The Legend of Dragoon", c:"PS1", y:1999, yt:"utSIYd0vl5I",
+      p:"Épico de quatro CDs com batalhas de timing. Cult declarado no Brasil." },
+    { id:"wild-arms", t:"Wild Arms", c:"PS1", y:1996, yt:"JvQaqDWoxt4",
+      p:"Faroeste com magia e robôs — o primeiro RPG 3D do PlayStation." },
+    { id:"lunar-sssc", t:"Lunar: Silver Star Story Complete", c:"PS1", y:1998, yt:"92tSSdoLaks",
+      p:"Jornada clássica de herói com cutscenes animadas e nenhuma dificuldade punitiva." },
+
+    { id:"suikoden1", t:"Suikoden", c:"PS1", y:1996, yt:"WzLvvv5t0tE", series:"suikoden", order:1,
+      p:"Início da saga: 108 Estrelas do Destino, um exército e um castelo pra reconstruir." },
+    { id:"suikoden2", t:"Suikoden II", c:"PS1", y:1998, yt:"rfAJ5a6V7KI", series:"suikoden", order:2,
+      p:"Guerra, política e um dos melhores vilões dos games." },
+
+    { id:"tomb-raider", t:"Tomb Raider", c:"PS1", y:1996, yt:"VkD8x9aItCs",
+      p:"Lara Croft, tumbas milenares e puzzles — a aventura que definiu o gênero." },
+
+    { id:"golden-sun", t:"Golden Sun", c:"GBA", y:2001, yt:"XYFJCXcdhb0", series:"golden-sun", order:1,
+      p:"RPG portátil com puzzles de Psinergia e visual de impressionar na época." },
+    { id:"golden-sun-2", t:"Golden Sun: The Lost Age", c:"GBA", y:2003, yt:"R7UpzDGS7b4", series:"golden-sun", order:2,
+      p:"A outra metade da história — agora do lado de quem parecia vilão." },
+
+    { id:"pokemon-emerald", t:"Pokémon Emerald", c:"GBA", y:2004, yt:"KInoJimjJzI",
+      p:"Para muita gente, a definição de 'modo história' de Pokémon." },
+    { id:"pokemon-crystal", t:"Pokémon Crystal", c:"GBC", y:2000, yt:"FUkAmzhXOZo",
+      p:"A versão definitiva da gen 2 — Johto, Kanto e o Suicune com história própria." },
+
+    { id:"phantasy-star-4", t:"Phantasy Star IV", c:"MD", y:1993, yt:"2ieD0rPFbAk",
+      p:"O auge do RPG 16-bit e o fecho perfeito de uma saga inteira." },
+    { id:"shining-force-2", t:"Shining Force II", c:"MD", y:1994, yt:"CwUNky1N4PY",
+      p:"Tático acessível e viciante — o melhor lugar pra começar em Shining Force." },
+
+    { id:"fire-emblem", t:"Fire Emblem", c:"GBA", y:2003, yt:"ALuRb6UqTKU",
+      p:"O tático que apresentou a série ao Ocidente — permadeath e roteiro denso." }
+  ];
+
+  const HKEY = "gcr_jogados_v2";
+  const $ = (id) => document.getElementById(id);
+  const byId = (id) => GAMES.find((g) => g.id === id);
+
+  const el = {
+    roll: $("roll"), idle: $("idle"), result: $("result"),
+    title: $("title"), pitch: $("pitch"),
+    bConsole: $("b-console"), bYear: $("b-year"), bSeq: $("b-seq"),
+    cover: $("cover"), trailer: $("trailer"), mediaFallback: $("media-fallback"),
+    emu: $("lnk-emu"), rom: $("lnk-rom"), emuName: $("emu-name"),
+    commitRow: $("commit-row"), commit: $("commit"), committedMsg: $("committed-msg"),
+    toast: $("toast"),
+    playedCount: $("played-count"), clear: $("clear"), playedList: $("played-list"), playedEmpty: $("played-empty"),
+    poolTotal: $("pool-total"), poolOpen: $("pool-open"),
+    catCount: $("cat-count"), catDone: $("cat-done"), catalogList: $("catalog-list"),
+    modalBackdrop: $("modal-backdrop"), modalX: $("modal-x"), modalCover: $("modal-cover"),
+    modalTitle: $("modal-title"), modalBadges: $("modal-badges"), modalPitch: $("modal-pitch"),
+    modalClose: $("modal-close"), modalUndo: $("modal-undo"), confetti: $("confetti")
+  };
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coverCache = {};
+  let candidate = null;
+  let committed = false;
+
+  const loadPlayed = () => {
+    try { const v = JSON.parse(localStorage.getItem(HKEY)); return Array.isArray(v) ? v : []; }
+    catch { return []; }
+  };
+  const savePlayed = (a) => { try { localStorage.setItem(HKEY, JSON.stringify(a)); } catch { /* modo privado */ } };
+
+  // Jogos liberados pro sorteio: não escolhidos ainda e, se forem sequência, com o anterior já escolhido.
+  function eligible() {
+    const done = new Set(loadPlayed());
+    return GAMES.filter((g) => {
+      if (done.has(g.id)) return false;
+      if (g.series && g.order > 1) {
+        return GAMES
+          .filter((x) => x.series === g.series && x.order < g.order)
+          .every((p) => done.has(p.id));
+      }
+      return true;
+    });
+  }
+
+  const romUrl = (g) =>
+    "https://www.google.com/search?hl=pt-BR&lr=lang_pt&q=" +
+    encodeURIComponent(`${g.t} ${EMU[g.c].label} rom português download`);
+
+  async function coverFor(g) {
+    if (g.id in coverCache) return coverCache[g.id];
+    const url =
+      "https://pt.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&origin=*&gsrsearch=" +
+      encodeURIComponent(g.t + " jogo eletrônico");
+    const fallbackUrl =
+      "https://en.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&origin=*&gsrsearch=" +
+      encodeURIComponent(g.t + " video game");
+    for (const u of [url, fallbackUrl]) {
+      try {
+        const r = await fetch(u, { credentials: "omit" });
+        const d = await r.json();
+        const pages = d && d.query && d.query.pages;
+        const first = pages && Object.values(pages)[0];
+        const src = first && first.thumbnail && first.thumbnail.source;
+        if (src) { coverCache[g.id] = src; return src; }
+      } catch { /* tenta o próximo */ }
+    }
+    coverCache[g.id] = null;
+    return null;
+  }
+
+  function renderMedia(g) {
+    // capa
+    el.cover.innerHTML = `<span class="ph">${EMU[g.c].label}<br>· ${g.y} ·</span>`;
+    coverFor(g).then((src) => {
+      if (candidate && candidate.id === g.id && src) {
+        el.cover.innerHTML = `<img src="${src}" alt="Capa de ${g.t}" loading="lazy" referrerpolicy="no-referrer">`;
+      }
+    });
+    // trailer — pôster clicável (evita erro de embed no load; só carrega o player ao clicar)
+    if (g.yt) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "play-poster";
+      btn.setAttribute("aria-label", "Tocar vídeo de " + g.t);
+      btn.style.backgroundImage = `url('https://i.ytimg.com/vi/${g.yt}/hqdefault.jpg')`;
+      btn.addEventListener("click", () => playTrailer(g));
+      el.trailer.replaceChildren(btn);
+      el.mediaFallback.innerHTML =
+        `<a href="https://www.youtube.com/watch?v=${g.yt}" target="_blank" rel="noopener">▶ abrir trailer no YouTube ↗</a>`;
+      el.mediaFallback.hidden = false;
+    } else {
+      el.trailer.innerHTML = `<div class="ph">sem vídeo</div>`;
+      el.mediaFallback.hidden = true;
+    }
+  }
+
+  function playTrailer(g) {
+    el.trailer.innerHTML =
+      `<iframe src="https://www.youtube-nocookie.com/embed/${g.yt}?autoplay=1&rel=0&modestbranding=1&playsinline=1" ` +
+      `title="Vídeo: ${g.t}" ` +
+      `allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  }
+
+  function showCandidate(g) {
+    candidate = g;
+    committed = false;
+    const emu = EMU[g.c];
+
+    el.title.textContent = g.t;
+    el.title.classList.remove("rolling");
+    el.pitch.textContent = g.p;
+    el.bConsole.textContent = emu.label;
+    el.bYear.textContent = String(g.y);
+
+    if (g.series && g.order > 1) {
+      el.bSeq.textContent = "SAGA · Nº " + g.order;
+      el.bSeq.hidden = false;
+    } else {
+      el.bSeq.hidden = true;
+    }
+
+    el.emu.href = emu.url;
+    el.emuName.textContent = emu.name;
+    el.rom.href = romUrl(g);
+
+    renderMedia(g);
+
+    el.commit.textContent = "✓ ESCOLHEMOS ESSE";
+    el.commitRow.hidden = false;
+    el.committedMsg.hidden = true;
+
+    el.idle.hidden = true;
+    el.result.classList.add("show");
+    el.roll.textContent = "SORTEAR OUTRO";
+    setToast("");
+  }
+
+  let toastTimer = null;
+  function setToast(msg) {
+    clearTimeout(toastTimer);
+    el.toast.textContent = msg;
+    el.toast.style.opacity = "1";
+    if (msg) toastTimer = setTimeout(() => { el.toast.style.opacity = "0"; }, 5000);
+  }
+
+  function roll() {
+    let pool = eligible();
+    if (candidate && !committed && pool.length > 1) {
+      pool = pool.filter((g) => g.id !== candidate.id);
+    }
+    if (pool.length === 0) {
+      el.result.classList.remove("show");
+      el.idle.hidden = false;
+      el.idle.textContent = "🏆 VOCÊS ZERARAM O CLUBE!";
+      el.roll.disabled = true;
+      el.roll.textContent = "ACABOU A LISTA";
+      candidate = null;
+      return;
+    }
+    const finalGame = pool[Math.floor(Math.random() * pool.length)];
+
+    el.roll.disabled = true;
+    el.idle.hidden = true;
+    el.result.classList.add("show");
+    el.commitRow.hidden = true;
+    el.committedMsg.hidden = true;
+    el.bSeq.hidden = true;
+    el.title.classList.add("rolling");
+    el.pitch.textContent = "";
+    el.bConsole.textContent = "· · ·";
+    el.bYear.textContent = "· · ·";
+    el.cover.innerHTML = `<span class="ph">sorteando…</span>`;
+    el.trailer.innerHTML = `<div class="ph">sorteando…</div>`;
+    el.mediaFallback.hidden = true;
+    el.emu.removeAttribute("href");
+    el.rom.removeAttribute("href");
+
+    const finish = () => {
+      el.title.textContent = finalGame.t;
+      showCandidate(finalGame);
+      el.roll.disabled = false;
+    };
+
+    if (reduceMotion) { el.roll.textContent = "…"; setTimeout(finish, 220); return; }
+
+    let step = 0;
+    const total = 22;
+    const tick = () => {
+      step++;
+      el.title.textContent = GAMES[Math.floor(Math.random() * GAMES.length)].t;
+      if (step >= total) { finish(); return; }
+      setTimeout(tick, 45 + Math.pow(step / total, 3) * 260);
+    };
+    el.roll.textContent = "SORTEANDO…";
+    tick();
+  }
+
+  function commit() {
+    if (!candidate || committed) return;
+    const g = candidate;
+    const played = loadPlayed();
+    if (!played.includes(g.id)) played.push(g.id);
+    savePlayed(played);
+    committed = true;
+
+    el.commitRow.hidden = true;
+    el.committedMsg.textContent = "✓ " + g.t + " — na lista do clube! 🎉";
+    el.committedMsg.hidden = false;
+    el.roll.textContent = "SORTEAR PRÓXIMO";
+
+    renderPlayed();
+
+    if (g.series) {
+      const next = GAMES.find((x) => x.series === g.series && x.order === g.order + 1);
+      if (next && eligible().some((e) => e.id === next.id)) {
+        setToast("🔓 " + next.t + " entrou no sorteio!");
+      }
+    }
+
+    openModal(g);
+    fireConfetti();
+  }
+
+  function reopenCommit() {
+    committed = false;
+    el.commit.textContent = "✓ ESCOLHEMOS ESSE";
+    el.commitRow.hidden = false;
+    el.committedMsg.hidden = true;
+    if (el.result.classList.contains("show")) el.roll.textContent = "SORTEAR OUTRO";
+  }
+
+  function openModal(g) {
+    el.modalTitle.textContent = g.t;
+    el.modalPitch.textContent = g.p;
+    let b = `<span class="badge">${EMU[g.c].label}</span><span class="badge year">${g.y}</span>`;
+    if (g.series && g.order > 1) b += `<span class="badge seq">SAGA · Nº ${g.order}</span>`;
+    el.modalBadges.innerHTML = b;
+    el.modalCover.innerHTML = `<span class="ph">${EMU[g.c].label}<br>· ${g.y} ·</span>`;
+    coverFor(g).then((src) => {
+      if (src && !el.modalBackdrop.hidden) {
+        el.modalCover.innerHTML = `<img src="${src}" alt="Capa de ${g.t}" referrerpolicy="no-referrer">`;
+      }
+    });
+    el.modalBackdrop.hidden = false;
+    document.body.style.overflow = "hidden";
+    el.modalClose.focus();
+  }
+
+  function closeModal() {
+    el.modalBackdrop.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  function undoChoice() {
+    if (candidate) {
+      savePlayed(loadPlayed().filter((x) => x !== candidate.id));
+      reopenCommit();
+      renderPlayed();
+      setToast("Escolha desfeita — dá pra escolher de novo.");
+    }
+    closeModal();
+  }
+
+  function fireConfetti() {
+    if (reduceMotion) return;
+    const cv = el.confetti;
+    const ctx = cv.getContext("2d");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = window.innerWidth, H = window.innerHeight;
+    cv.hidden = false;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const colors = ["#ffc53d", "#ff2e88", "#35e0f0", "#46d17b", "#ffffff"];
+    const parts = [];
+    for (const ox of [0.5, 0.12, 0.88]) {
+      for (let i = 0; i < 55; i++) {
+        parts.push({
+          x: W * ox, y: H * (ox === 0.5 ? 0.42 : 0.72),
+          vx: (Math.random() - 0.5) * (ox === 0.5 ? 13 : 9) + (ox === 0.12 ? 5 : ox === 0.88 ? -5 : 0),
+          vy: Math.random() * -15 - (ox === 0.5 ? 6 : 3),
+          g: 0.32 + Math.random() * 0.16,
+          s: 4 + Math.random() * 6,
+          rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+          c: colors[(Math.random() * colors.length) | 0]
+        });
+      }
+    }
+    const start = performance.now();
+    const frame = (t) => {
+      const e = t - start;
+      ctx.clearRect(0, 0, W, H);
+      let alive = false;
+      const alpha = Math.max(0, 1 - e / 2800);
+      for (const p of parts) {
+        p.vy += p.g; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        if (p.y < H + 40) alive = true;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6);
+        ctx.restore();
+      }
+      if (alive && e < 3200) requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, W, H); cv.hidden = true; }
+    };
+    requestAnimationFrame(frame);
+  }
+
+  function renderPlayed() {
+    const ids = loadPlayed();
+    el.playedCount.textContent = String(ids.length);
+    el.clear.hidden = ids.length === 0;
+    el.playedEmpty.hidden = ids.length !== 0;
+    el.playedList.innerHTML = "";
+
+    ids.forEach((id, i) => {
+      const g = byId(id);
+      if (!g) return;
+      const li = document.createElement("li");
+      li.innerHTML =
+        `<span class="n">${String(i + 1).padStart(2, "0")}</span>` +
+        `<span class="name">${g.t}</span>` +
+        `<span class="meta">${EMU[g.c].label.replace(/ \(.*\)/, "")} · ${g.y}</span>` +
+        `<button class="rm" title="Tirar da lista" aria-label="Tirar ${g.t} da lista">✕</button>`;
+      li.querySelector(".rm").addEventListener("click", () => {
+        savePlayed(loadPlayed().filter((x) => x !== id));
+        if (candidate && candidate.id === id) reopenCommit();
+        renderPlayed();
+        setToast("");
+      });
+      el.playedList.appendChild(li);
+    });
+
+    const open = eligible().length;
+    el.poolTotal.textContent = String(GAMES.length);
+    el.poolOpen.textContent = String(open);
+    if (open > 0 && el.roll.textContent === "ACABOU A LISTA") {
+      el.roll.disabled = false;
+      el.roll.textContent = candidate ? "SORTEAR OUTRO" : "SORTEAR JOGO";
+      el.idle.textContent = "INSIRA UMA FICHA ▸ PRESSIONE SORTEAR";
+    }
+    renderCatalog();
+  }
+
+  function renderCatalog() {
+    const done = new Set(loadPlayed());
+    const openIds = new Set(eligible().map((g) => g.id));
+    el.catCount.textContent = String(GAMES.length);
+    el.catDone.textContent = String(done.size);
+    const rows = GAMES.slice().sort((a, b) => a.y - b.y || a.t.localeCompare(b.t));
+    el.catalogList.innerHTML = rows.map((g) => {
+      let cls = "avail", mark = "•", note = "";
+      if (done.has(g.id)) {
+        cls = "done"; mark = "✓";
+      } else if (!openIds.has(g.id) && g.series) {
+        cls = "locked"; mark = "🔒";
+        const prev = GAMES
+          .filter((x) => x.series === g.series && x.order < g.order && !done.has(x.id))
+          .sort((a, b) => a.order - b.order)[0];
+        if (prev) note = "depois de " + prev.t;
+      }
+      const meta = EMU[g.c].label.replace(/ \(.*\)/, "") + " · " + g.y + (note ? " · " + note : "");
+      return `<li class="cat-${cls}"><span class="cat-mark">${mark}</span>` +
+        `<span class="cat-name">${g.t}</span><span class="cat-meta">${meta}</span></li>`;
+    }).join("");
+  }
+
+  el.roll.addEventListener("click", roll);
+  el.commit.addEventListener("click", commit);
+  el.modalClose.addEventListener("click", closeModal);
+  el.modalX.addEventListener("click", closeModal);
+  el.modalUndo.addEventListener("click", undoChoice);
+  el.modalBackdrop.addEventListener("click", (e) => { if (e.target === el.modalBackdrop) closeModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !el.modalBackdrop.hidden) closeModal(); });
+  el.clear.addEventListener("click", () => {
+    if (loadPlayed().length && confirm("Limpar toda a lista de jogos já jogados?")) {
+      savePlayed([]);
+      renderPlayed();
+      setToast("");
+    }
+  });
+
+  renderPlayed();
+
+  // --- self-check ---
+  console.assert(GAMES.every((g) => EMU[g.c]), "todo jogo tem emulador");
+  console.assert(new Set(GAMES.map((g) => g.id)).size === GAMES.length, "ids únicos");
+  console.assert(GAMES.every((g) => !g.series || (typeof g.order === "number")), "saga tem order");
+  console.assert(GAMES.every((g) => !g.yt || /^[\w-]{11}$/.test(g.yt)), "yt id tem 11 chars");
+  console.assert(GAMES.filter((g) => g.c === "PS2").length === 0, "nada de PS2");
+  console.assert([el.modalBackdrop, el.modalClose, el.modalUndo, el.confetti].every(Boolean), "modal montado");
+  // sagas: o próximo nível só libera com TODOS os anteriores escolhidos
+  (() => {
+    const can = (g, done) => !g.series || g.order === 1 ||
+      GAMES.filter((x) => x.series === g.series && x.order < g.order).every((p) => done.has(p.id));
+    const s2 = byId("suikoden2"), r3 = byId("re3");
+    console.assert(!can(s2, new Set()), "Suikoden II bloqueado sem o I");
+    console.assert(can(s2, new Set(["suikoden1"])), "Suikoden II liberado com o I");
+    console.assert(!can(r3, new Set(["re1"])), "RE3 bloqueado só com o 1");
+    console.assert(can(r3, new Set(["re1", "re2"])), "RE3 liberado com 1 e 2");
+  })();
+})();
+</script>
+</body>
+</html>
