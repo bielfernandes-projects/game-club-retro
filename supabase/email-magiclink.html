@@ -1,0 +1,48 @@
+<!-- Supabase → Authentication → Email Templates → Magic Link -->
+<!-- Assunto sugerido: Seu link de acesso ao Game Club Retrô -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#08080b;margin:0;padding:32px 12px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="460" cellpadding="0" cellspacing="0" border="0" style="width:460px;max-width:100%;background:#101017;border:1px solid #24242f;border-radius:14px;">
+        <tr>
+          <td style="padding:34px 34px 0;text-align:center;">
+            <div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:700;letter-spacing:3px;color:#ffc53d;">GAME&nbsp;CLUB&nbsp;RETR&Ocirc;</div>
+            <div style="height:3px;width:44px;background:#ff2e88;margin:14px auto 0;border-radius:2px;"></div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 34px 0;text-align:center;font-family:Arial,Helvetica,sans-serif;">
+            <h1 style="margin:0;font-size:19px;line-height:1.4;color:#ededf2;font-weight:700;">Seu link de acesso</h1>
+            <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:#8b8b99;">
+              Clique no bot&atilde;o pra entrar no clube. O link vale por <strong style="color:#ededf2;">1 hora</strong> e s&oacute; funciona uma vez.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:26px 34px 0;text-align:center;">
+            <a href="{{ .ConfirmationURL }}" target="_blank"
+               style="display:inline-block;background:#ffc53d;color:#12040b;font-family:'Courier New',Courier,monospace;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;padding:16px 30px;border-radius:12px;">
+              ENTRAR NO CLUBE
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 34px 0;text-align:center;font-family:Arial,Helvetica,sans-serif;">
+            <p style="margin:0;font-size:12px;line-height:1.6;color:#6b6b78;">
+              Se o bot&atilde;o n&atilde;o abrir, copie e cole no navegador:<br>
+              <a href="{{ .ConfirmationURL }}" style="color:#35e0f0;word-break:break-all;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 34px 32px;text-align:center;font-family:Arial,Helvetica,sans-serif;border-top:1px solid #1c1c26;">
+            <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#6b6b78;">
+              N&atilde;o pediu esse link? Pode ignorar esse e-mail, n&atilde;o acontece nada.
+            </p>
+            <p style="margin:8px 0 0;font-size:11px;color:#4b4b57;">Game Club Retr&ocirc; &middot; um cl&aacute;ssico incontest&aacute;vel por m&ecirc;s</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

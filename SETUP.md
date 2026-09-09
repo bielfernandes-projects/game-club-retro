@@ -11,6 +11,10 @@ Já configurado por API:
 - ✅ Schema + RLS + hooks + realtime + seed (49 jogos + admin `gabriel.fernandeshw@gmail.com`).
 - ✅ Auth: Site URL + redirect URLs (`gameclub.bf.dev.br`, localhost, previews).
 - ✅ SMTP via **Resend** (remetente `Game Club Retrô <clube@bf.dev.br>`, domínio verificado).
+  Rate limit de e-mail: 100/h. Template do magic link em
+  [`supabase/email-magiclink.html`](supabase/email-magiclink.html) — colar em
+  **Authentication → Email Templates → Magic Link** (o painel é a única via: a
+  Management API recusa o token atual com 403).
 - ✅ Hook **before-user-created** ligado → e-mail fora da allowlist não cria conta.
 - ✅ `RAWG_API_KEY` no Vercel (production + preview + development).
 - ✅ Env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` no Vercel.
