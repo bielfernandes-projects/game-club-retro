@@ -1,72 +1,39 @@
-# Setup — o que falta pra `feat/club-app` ir pro ar
+# Setup
 
-O código, o schema e o seed já estão prontos e testados. Falta configurar 3 serviços
-externos. Passos marcados **[você]** precisam da sua conta; **[claude]** eu faço quando
-você me passar o que pedir.
+## Estado atual
 
----
+O backend está num **projeto Supabase standalone** na org `castordosgames@gmail.com`
+(`wikbubnxkxazzsikhelo`, região São Paulo) — **não** é mais o do Marketplace do Vercel
+(esse foi removido).
 
-## 1. Deletar o projeto Supabase duplicado  **[você]**
+Já configurado por API:
 
-Você criou o `hkpqfpzuravrxhoyovzq` à mão enquanto eu criava o `zplbyolguhodemmpzgvl`
-(o do Marketplace do Vercel, que é o que estamos usando).
+- ✅ Schema + RLS + hooks + realtime + seed (49 jogos + admin `gabriel.fernandeshw@gmail.com`).
+- ✅ Auth: Site URL + redirect URLs (`gameclub.bf.dev.br`, localhost, previews).
+- ✅ SMTP via **Resend** (remetente `Game Club Retrô <clube@bf.dev.br>`, domínio verificado).
+- ✅ Hook **before-user-created** ligado → e-mail fora da allowlist não cria conta.
+- ✅ `RAWG_API_KEY` no Vercel (production + preview + development).
+- ✅ Env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` no Vercel.
 
-→ Dashboard do Supabase → projeto `hkpqfpzuravrxhoyovzq` → Settings → General → **Delete project**.
-Isso também invalida a service role key que você colou no chat.
+## Falta
 
----
+1. **Você:** deletar os projetos Supabase que não são o `wikbubnxkxazzsikhelo`:
+   - `hkpqfpzuravrxhoyovzq` (o que você criou à mão).
+   - Se o do Marketplace (`zplbyolguhodemmpzgvl`) ainda aparecer no dashboard, some sozinho —
+     a resource foi removida do Vercel.
+2. **Claude:** testar a preview (login como admin, sorteio, avaliação) → merge pra `main`.
 
-## 2. Supabase Auth  **[você OU claude]**
+## Segredos (guardados fora do git)
 
-**Opção A (rápida, eu faço):** gere um _personal access token_ em
-`https://supabase.com/dashboard/account/tokens` e me mande. Eu rodo
-`node --env-file=.env.local scripts/setup-auth.mjs` e configuro tudo.
+Tudo em `.env.local` (git-ignored) e nas env vars do Vercel/Supabase. As chaves que você colou
+no chat (access token Supabase, Resend, RAWG) já estão nos lugares certos — pode
+**rotacionar** depois se quiser (gere novas e me avisa, ou troca você mesmo no Vercel/Supabase).
 
-**Opção B (dashboard, você faz):** projeto `zplbyolguhodemmpzgvl` →
+## Rodar local
 
-- **Authentication → URL Configuration**
-  - Site URL: `https://gameclub.bf.dev.br`
-  - Redirect URLs (Additional): `https://gameclub.bf.dev.br/**`, `http://localhost:5173/**`,
-    `https://game-club-retro-*-bielfernandes-projects-projects.vercel.app/**`
-- **Authentication → Hooks → Before User Created**
-  - Enable → tipo **Postgres** → schema `public` → função `hook_before_user_created`
-  - (Isso barra signup de e-mail que não está na allowlist. Sem isso, um estranho consegue
-    criar conta — mas fica sem acesso a nada pelas RLS.)
-
----
-
-## 3. Resend (e-mail do magic link)  **[você]** — obrigatório
-
-O SMTP nativo do Supabase só manda **2 e-mails/hora** e **recusa endereço fora do time**.
-Sem Resend, ninguém do clube consegue logar.
-
-1. `resend.com` → criar conta.
-2. **Domains → Add Domain** → `bf.dev.br` (ou `mail.bf.dev.br`). Ele te dá 3 registros DNS
-   (SPF/DKIM). Como o `bf.dev.br` usa nameserver da Vercel, adicione em
-   `vercel.com → bf.dev.br → DNS`. Espere verificar (~minutos).
-3. **API Keys → Create** (permissão "Sending access").
-4. Me mande: a API key **ou** os 4 valores de SMTP (host `smtp.resend.com`, port `465`,
-   user `resend`, pass = a API key). Eu configuro no Supabase via `setup-auth.mjs`.
-   Sender: `Game Club Retrô <clube@bf.dev.br>` (ajuste o local part se quiser).
-
----
-
-## 4. RAWG (nota de crítica / "Metacritic")  **[você]** — opcional (Fase 2)
-
-1. `rawg.io/apidocs` → "Get API Key" (60 segundos, grátis, 20k req/mês).
-2. Me mande a key. Eu rodo `vercel env add RAWG_API_KEY` (production + preview).
-
-Sem isso: o catálogo funciona, só não mostra a nota externa até você preencher à mão no
-CRUD do admin.
-
----
-
-## 5. Ir pro ar  **[claude]**
-
-Depois de 2 e 3: eu testo a preview (`feat/club-app`), você confirma o login, e aí eu faço
-o merge pra `main` → sobe em `https://gameclub.bf.dev.br` (o site estático atual sai do ar
-nesse momento).
-
-> A preview (`game-club-retro-git-feat-…vercel.app`) hoje pede login no Vercel — abra
-> logado na sua conta Vercel. Se quiser liberar pro pessoal testar antes do merge, dá pra
-> desligar a "Deployment Protection" de preview no projeto.
+```bash
+npm install
+npm run dev          # usa .env.local
+npm test
+node --env-file=.env.local scripts/rls-check.mjs
+```
