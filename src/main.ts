@@ -232,11 +232,13 @@ async function runDraw() {
   screen.innerHTML = `<div class="result"><div class="game-title rolling" id="rolltitle">…</div></div>`;
   const title = document.getElementById("rolltitle")!;
   const total = 16;
+  const startedAt = performance.now();
   let step = 0;
   const tick = () => {
     step++;
     title.textContent = games[(Math.random() * games.length) | 0]!.title;
-    if (step >= total) return settle();
+    // trava por tempo também: se a aba estiver em 2º plano o setTimeout é estrangulado
+    if (step >= total || performance.now() - startedAt > 2600) return settle();
     setTimeout(tick, 45 + Math.pow(step / total, 3) * 240);
   };
   rollBtn.textContent = "SORTEANDO…";
