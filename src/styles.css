@@ -34,6 +34,17 @@ body {
 a { color: var(--cyan); }
 button { font-family: inherit; }
 
+/* nenhum campo pode aparecer com fundo branco do navegador */
+input, textarea, select {
+  font-family: inherit; font-size: inherit; color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 11px 13px;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+input:focus, textarea:focus, select:focus { border-color: var(--cyan); outline: none; }
+input:-webkit-autofill { -webkit-text-fill-color: var(--text); -webkit-box-shadow: 0 0 0 100px var(--panel-2) inset; }
+
 /* teclado */
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 4px; }
 

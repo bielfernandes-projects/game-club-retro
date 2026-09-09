@@ -84,7 +84,7 @@ export function catalogHtml(
       const score =
         g.critic_score != null ? `<span class="cat-score">${g.critic_score}</span> · ` : "";
       const fav = g.featured ? ' <span class="fav" title="Destaque">★</span>' : "";
-      return `<li class="cat-${cls}">
+      return `<li class="cat-${cls}" data-id="${esc(g.id)}" role="button" tabindex="0" aria-label="Ver ficha de ${esc(g.title)}">
         <span class="cat-mark">${mark}</span>
         <span class="cat-name">${esc(g.title)}${fav}</span>
         <span class="cat-meta">${note}${score}${consoleShort(g.console)} · ${g.year}</span>

@@ -277,6 +277,20 @@ function wireHome() {
     }
   });
 
+  // delegação: clicar/teclar numa linha do catálogo abre a ficha do jogo
+  app.addEventListener("click", (e) => {
+    const li = (e.target as HTMLElement).closest<HTMLElement>(".catalog-list li[data-id]");
+    if (li?.dataset.id) openGameInfo(li.dataset.id);
+  });
+  app.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const li = (e.target as HTMLElement).closest<HTMLElement>(".catalog-list li[data-id]");
+    if (li?.dataset.id) {
+      e.preventDefault();
+      openGameInfo(li.dataset.id);
+    }
+  });
+
   const stage = document.getElementById("stage");
   if (!stage) return;
 
@@ -361,26 +375,55 @@ async function confirmRound() {
 // ======================================================================
 // Modal de comemoração
 // ======================================================================
-function openModal(g: Game) {
+/** Ficha do jogo a partir do catálogo — mesmo pop-up do sorteio, sem CTA de "bora jogar". */
+function openGameInfo(id: string) {
+  const g = gameById(id);
+  if (!g) return;
+  const played = playedIds().has(g.id);
+  const cav = averages.get(g.id);
+  const club = played && cav ? `<p class="club-avg">MÉDIA DO CLUBE · ${cav.avg.toFixed(1)}★ (${cav.n})</p>` : "";
+  openModal(g, {
+    kicker: played ? "JÁ JOGAMOS" : "NA CURADORIA",
+    hideCover: true,
+    body: `<p class="modal-pitch">${esc(g.pitch ?? "")}</p>${club}${gameMediaHtml(g)}`,
+    cta: `<button class="ghost-btn" id="mok">fechar</button>`,
+  });
+}
+
+function openModal(
+  g: Game,
+  opts: { kicker?: string; body?: string; cta?: string; hideCover?: boolean } = {},
+) {
+  const kicker = opts.kicker ?? "🏆 JOGO DO MÊS";
+  const body = opts.body ?? `<p class="modal-pitch">${esc(g.pitch ?? "")}</p>`;
+  const cta = opts.cta ?? `<button class="commit-btn" id="mok">BORA JOGAR!</button>`;
+  const cover = opts.hideCover
+    ? ""
+    : `<div class="modal-cover">${
+        g.cover_url
+          ? `<img src="${esc(g.cover_url)}" alt="" referrerpolicy="no-referrer">`
+          : `<span class="ph"><span class="ph-glyph">?</span><span class="ph-sub">${g.year} · sem capa</span></span>`
+      }</div>`;
   modalRoot.innerHTML = `
     <div class="modal-backdrop" id="mb">
       <div class="modal" role="dialog" aria-modal="true">
         <button class="modal-x" id="mx" aria-label="Fechar">✕</button>
-        <div class="modal-kicker">🏆 JOGO DO MÊS</div>
-        <div class="modal-cover">${
-          g.cover_url
-            ? `<img src="${esc(g.cover_url)}" alt="" referrerpolicy="no-referrer">`
-            : `<span class="ph">· ${g.year} ·</span>`
-        }</div>
+        <div class="modal-kicker">${esc(kicker)}</div>
+        ${cover}
         <h2 class="modal-title">${esc(g.title)}</h2>
         <div class="modal-badges">${badgesHtml(g)}</div>
-        <p class="modal-pitch">${esc(g.pitch ?? "")}</p>
-        <div class="modal-actions"><button class="commit-btn" id="mok">BORA JOGAR!</button></div>
+        ${body}
+        <div class="modal-actions">${cta}</div>
       </div>
     </div>`;
   const close = () => (modalRoot.innerHTML = "");
   modalRoot.querySelector("#mx")?.addEventListener("click", close);
   modalRoot.querySelector("#mok")?.addEventListener("click", close);
+  modalRoot.querySelector(".play-poster")?.addEventListener("click", (e) => {
+    const btn = e.currentTarget as HTMLElement;
+    if (btn.dataset.yt) btn.closest(".trailer")!.innerHTML =
+      `<iframe src="${ytEmbed(btn.dataset.yt)}" title="Vídeo" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  });
   modalRoot.querySelector("#mb")?.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).id === "mb") close();
   });
