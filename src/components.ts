@@ -18,11 +18,11 @@ export function gameMediaHtml(g: Game): string {
   const label = EMU[g.console].label;
   const cover = g.cover_url
     ? `<img src="${esc(g.cover_url)}" alt="Capa de ${esc(g.title)}" loading="lazy" referrerpolicy="no-referrer">`
-    : `<span class="ph">${esc(label)}<br>· ${g.year} ·</span>`;
+    : `<span class="ph"><span class="ph-glyph">?</span><span class="ph-line">${esc(label)}</span><span class="ph-sub">${g.year} · sem capa</span></span>`;
 
   const trailer = g.youtube_id
     ? `<button class="play-poster" type="button" data-yt="${esc(g.youtube_id)}" aria-label="Tocar vídeo de ${esc(g.title)}" style="background-image:url('${ytPoster(g.youtube_id)}')"></button>`
-    : `<div class="ph">sem vídeo</div>`;
+    : `<div class="ph"><span class="ph-glyph">▶</span><span class="ph-line">sem trailer</span></div>`;
 
   const fallback = g.youtube_id
     ? `<div class="media-fallback"><a href="${ytWatch(g.youtube_id)}" target="_blank" rel="noopener">▶ abrir trailer no YouTube ↗</a></div>`
@@ -66,7 +66,7 @@ export function catalogHtml(
   const items = rows
     .map((g) => {
       let cls = "avail";
-      let mark = "•";
+      let mark = "";
       let note = "";
       if (playedIds.has(g.id)) {
         cls = "done";
@@ -83,10 +83,10 @@ export function catalogHtml(
       }
       const score =
         g.critic_score != null ? `<span class="cat-score">${g.critic_score}</span> · ` : "";
-      const fav = g.featured ? '<span class="fav">★ </span>' : "";
+      const fav = g.featured ? ' <span class="fav" title="Destaque">★</span>' : "";
       return `<li class="cat-${cls}">
         <span class="cat-mark">${mark}</span>
-        <span class="cat-name">${fav}${esc(g.title)}</span>
+        <span class="cat-name">${esc(g.title)}${fav}</span>
         <span class="cat-meta">${note}${score}${consoleShort(g.console)} · ${g.year}</span>
       </li>`;
     })

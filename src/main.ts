@@ -127,7 +127,11 @@ function renderStage(stage: HTMLElement) {
     if (isAdmin()) parts.push(adminRoundControlsHtml(round));
   } else {
     parts.push(`<div class="cabinet"><div class="screen">
-      <div class="idle-line">AINDA NÃO TEM JOGO DO MÊS</div>
+      <div class="standby">
+        <span class="standby-dot"></span>
+        <div class="idle-line">AINDA NÃO TEM JOGO DO MÊS</div>
+        <div class="standby-sub">aguardando o próximo sorteio</div>
+      </div>
     </div></div>`);
     if (!session)
       parts.push(`<p class="notice">Só o admin sorteia. <a href="#/entrar">Entre</a> se você é do clube pra avaliar quando o mês fechar.</p>`);

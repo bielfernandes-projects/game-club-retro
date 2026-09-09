@@ -16,7 +16,8 @@ export const romSearchUrl = (g: Pick<Game, "title" | "console">) =>
   "https://www.google.com/search?hl=pt-BR&lr=lang_pt&q=" +
   encodeURIComponent(`${g.title} ${EMU[g.console].label} rom português download`);
 
-export const ytPoster = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+// hqdefault existe pra todo vídeo; as barras 4:3 são cortadas por background-size:cover no .play-poster
+export const ytPoster = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 export const ytWatch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 export const ytEmbed = (id: string) =>
   `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
