@@ -23,16 +23,12 @@ Já configurado por API:
 
 - Migration `supabase/migrations/0004_store.sql` (tabela `store_items` + os 7 itens fixos).
   Aplicar: `node --env-file=.env.local scripts/sql.mjs supabase/migrations/0004_store.sql`.
-- **Falta você:** adicionar no Vercel (todos os ambientes) as env vars **server-only**:
-  - `SHOPEE_APP_ID` e `SHOPEE_APP_SECRET` (painel de Afiliados da Shopee) — já estão no
-    `.env.local`. **Foram coladas no chat — dá pra rotacionar depois.**
-  - `CRON_SECRET` (qualquer string aleatória) — o Vercel manda no header do cron; `api/store-refresh`
-    recusa quem não tiver. Sem ela o endpoint fica aberto (baixo risco, mas melhor pôr).
-  - `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_URL` (o cron escreve no banco fora do RLS) — conferir
-    que existem no Vercel.
-- O cron roda **09:00 UTC** (06:00 BRT) todo dia — ver `vercel.json`. Pra forçar: o botão
-  **"buscar todos agora"** no `#/admin` → Loja, ou
-  `curl -H "authorization: Bearer $CRON_SECRET" https://gameclub.bf.dev.br/api/store-refresh`.
+- Env vars **server-only** no Vercel (já configuradas, todos os ambientes): `SHOPEE_APP_ID`,
+  `SHOPEE_APP_SECRET` (painel de Afiliados da Shopee). **Foram coladas no chat — dá pra
+  rotacionar depois.** (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` também estão lá, sem uso
+  hoje.)
+- **Sem cron.** O admin atualiza a Loja quando quiser pelo botão **"buscar todos agora"** em
+  `#/admin` → Loja.
 
 ## Falta
 

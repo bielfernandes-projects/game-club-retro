@@ -96,12 +96,11 @@ com um comentário opcional. Não é um Jogo até o admin criar.
 
 Página (`#/loja`, alcançada por um botão piscante no rodapé da home) com consoles/acessórios
 retrô baratos que a galera pode comprar pra parar de jogar no PC/celular. Cada item tem um
-**nome**, um **termo de busca** e — preenchidos por um robô diário a partir da API de
-Afiliados da Shopee — foto, preço, nota, vendidos e um **link de afiliado** rastreável
-(subId `gameclub`, o clube ganha comissão). O robô pega o resultado **mais relevante** de
-cada busca; se um dia não achar, mantém o do dia anterior. O **admin** gerencia a lista e
-pode forçar a busca; todo campo é editável na mão. É público e **não faz parte do modelo de
-jogo** (não entra em sorteio, catálogo nem rodada).
+**nome** e um **termo de busca**; quando o **admin** aperta "buscar todos agora", a API de
+Afiliados da Shopee preenche foto, preço, nota, vendidos e um **link de afiliado** rastreável
+(subId `gameclub`, o clube ganha comissão) com o resultado **mais relevante** de vendedor
+**brasileiro** pra cada termo. Item sem resultado fica como estava. Todo campo é editável na
+mão. É público e **não faz parte do modelo de jogo** (não entra em sorteio, catálogo nem rodada).
 
 ## Inativo vs. excluído
 

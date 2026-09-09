@@ -33,11 +33,11 @@ emulador/ROM e a média do clube, se já foi jogado) — o mesmo pop-up do sorte
 
 ## Loja
 
-Seção no rodapé da home com consoles/acessórios retrô à venda. Um **cron diário**
-(`api/store-refresh`) busca, pra cada item, a oferta de **maior comissão** na Shopee
-(Affiliate API, subId `gameclub`) e atualiza foto/preço/nota/link. Se num dia não achar nada,
-mantém o do dia anterior. O admin (`#/admin` → Loja) gerencia a lista de termos de busca e
-pode forçar a atualização.
+Botão piscante no rodapé da home → página `#/loja` com consoles/acessórios retrô à venda.
+O admin (`#/admin` → Loja) gerencia a lista de termos de busca e, no botão **"buscar todos
+agora"**, puxa da Shopee (Affiliate API, só vendedor BR, subId `gameclub`) o resultado mais
+relevante de cada termo — foto, preço, nota e link de afiliado. Item sem resultado fica como
+estava.
 
 ## Rodar local
 
