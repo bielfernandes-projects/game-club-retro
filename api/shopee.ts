@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   hasCreds, parseIds, resolveUrl, bestOfferByKeyword, offerByIds, type ShopeeOffer,
-} from "./_shopee";
+} from "../lib/shopee.js";
 
 /**
  * Busca sob demanda (usada pelo painel admin):

@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 
 /**
- * Helpers da Shopee Affiliate Open Platform (GraphQL). Prefixo "_" → o Vercel não roteia.
- * Usado por api/shopee.ts (busca sob demanda) e api/store-refresh.ts (cron diário).
- * Credenciais só no servidor: SHOPEE_APP_ID / SHOPEE_APP_SECRET.
+ * Helpers da Shopee Affiliate Open Platform (GraphQL).
+ * Fora de `api/` (senão o Vercel roteia) e importado como `../lib/shopee.js` (extensão .js
+ * explícita — necessária no ESM). Credenciais só no servidor: SHOPEE_APP_ID / SHOPEE_APP_SECRET.
  */
 const ENDPOINT = "https://open-api.affiliate.shopee.com.br/graphql";
 const UA =
@@ -16,10 +16,10 @@ export interface ShopeeOffer {
   image: string | null;
   title: string | null;
   price: string | null;
-  link: string | null; // shortLink rastreável (fallback offerLink/productLink)
+  link: string | null;
   rating: number | null;
   sales: number | null;
-  commission: number | null; // % da comissão
+  commission: number | null;
   item_id: number | null;
   shop_id: number | null;
 }
@@ -28,7 +28,6 @@ export function hasCreds(): boolean {
   return !!(process.env.SHOPEE_APP_ID && process.env.SHOPEE_APP_SECRET);
 }
 
-/** POST GraphQL assinado. Retorna `data` ou null. */
 async function gql(query: string, signal?: AbortSignal): Promise<Json | null> {
   const appId = process.env.SHOPEE_APP_ID as string;
   const secret = process.env.SHOPEE_APP_SECRET as string;
@@ -90,7 +89,6 @@ export async function resolveUrl(u: string, signal?: AbortSignal): Promise<strin
   }
 }
 
-/** Gera o shortLink rastreável (subId "gameclub"). Fallback: a própria origem. */
 async function shortLink(originUrl: string, signal?: AbortSignal): Promise<string> {
   const esc = originUrl.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const d = await gql(
@@ -119,7 +117,6 @@ async function nodeToOffer(node: Json, signal?: AbortSignal): Promise<ShopeeOffe
     link,
     rating: rating != null && rating > 0 ? rating : null,
     sales: sales != null && sales >= 0 ? Math.round(sales) : null,
-    // commissionRate costuma vir 0–1; normaliza pra %
     commission: commission != null ? (commission <= 1 ? commission * 100 : commission) : null,
     item_id: itemId,
     shop_id: shopId,
@@ -141,13 +138,9 @@ const ACCESSORY = [
 ];
 
 /**
- * Só ofertas que casam com o termo:
- *  - todo "código de modelo" do termo (letra+dígito, ex: r36s, m15) tem que aparecer no nome;
- *  - ≥ 60% das outras palavras significativas ("console", "grip", "bolsa"…);
- *  - se o termo NÃO menciona acessório, descarta nomes com "grip/capa/bolsa/…" (senão um
- *    acessório do console roubaria a vaga do console).
- * Entre as que casam, a de MAIOR RELEVÂNCIA (a Shopee já devolve nessa ordem) — tende a ter
- * uma média melhor de vendas × comissão que "só a maior comissão". Nada casa → null.
+ * Só ofertas que casam com o termo (código de modelo + ≥60% das palavras; descarta acessório
+ * quando o termo pede console). Pega a mais relevante — melhor média de vendas × comissão que
+ * "só a maior comissão". Nada casa → null.
  */
 function pickForKeyword(nodes: Json[], keyword: string): Json | null {
   const tokens = norm(keyword).split(" ").filter((t) => t.length >= 2 && !STOP.has(t));
@@ -156,7 +149,6 @@ function pickForKeyword(nodes: Json[], keyword: string): Json | null {
   const words = tokens.filter((t) => !isModel(t));
   const need = Math.ceil(words.length * 0.6);
   const banned = tokens.some((t) => ACCESSORY.includes(t)) ? [] : ACCESSORY;
-
   return (
     nodes.find((n) => {
       const name = norm(String(n.productName ?? ""));
@@ -167,7 +159,6 @@ function pickForKeyword(nodes: Json[], keyword: string): Json | null {
   );
 }
 
-/** Melhor oferta (maior comissão entre as que casam) pra um termo de busca. */
 export async function bestOfferByKeyword(
   keyword: string,
   signal?: AbortSignal,
@@ -182,7 +173,6 @@ export async function bestOfferByKeyword(
   return best ? nodeToOffer(best, signal) : null;
 }
 
-/** Oferta de um produto específico (re-buscar). */
 export async function offerByIds(
   itemId: number,
   shopId: number,

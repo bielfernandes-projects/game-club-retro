@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { hasCreds, bestOfferByKeyword } from "./_shopee";
+import { hasCreds, bestOfferByKeyword } from "../lib/shopee.js";
 
 /**
  * Cron diário (ver vercel.json). Pra cada linha ativa de `store_items` com `keyword`,
