@@ -21,6 +21,17 @@ export async function setGameActive(id: string, active: boolean): Promise<void> 
   if (error) throw error;
 }
 
+/** Exclui de vez. Falha com mensagem amigável se o jogo já foi rodada (FK). */
+export async function deleteGame(id: string): Promise<void> {
+  const { error } = await supabase.from("games").delete().eq("id", id);
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error("Esse jogo já foi jogo do mês em alguma rodada — não dá pra excluir (deixe inativo).");
+    }
+    throw error;
+  }
+}
+
 export async function setGameFeatured(id: string, featured: boolean): Promise<void> {
   const { error } = await supabase.from("games").update({ featured }).eq("id", id);
   if (error) throw error;

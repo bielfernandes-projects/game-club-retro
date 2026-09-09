@@ -1,19 +1,24 @@
 import type { ConsoleCode, Game, Role } from "./types";
-import { listGames, upsertGame, setGameActive, setGameFeatured, enrichGame } from "./data/games";
+import {
+  listGames, upsertGame, setGameActive, setGameFeatured, enrichGame, deleteGame,
+} from "./data/games";
 import {
   listAllowlist, addMember, removeMember, setMemberRole,
   getInviteCode, setInviteCode,
 } from "./data/members";
+import { listSuggestions, setSuggestionStatus, deleteSuggestion } from "./data/suggestions";
 import { esc } from "./components";
 
 const CONSOLES: ConsoleCode[] = ["SNES", "MD", "N64", "PS1", "GBA", "GBC"];
-let tab: "jogos" | "membros" = "jogos";
+let tab: "jogos" | "membros" | "sugestoes" = "jogos";
+let prefillTitle = "";
 
 export async function renderAdmin(root: HTMLElement, onChange: () => void) {
   root.innerHTML = `
     <h1>Modo admin</h1>
     <div class="admin-tabs">
       <button data-tab="jogos" class="${tab === "jogos" ? "on" : ""}">Jogos</button>
+      <button data-tab="sugestoes" class="${tab === "sugestoes" ? "on" : ""}">Sugestões</button>
       <button data-tab="membros" class="${tab === "membros" ? "on" : ""}">Membros</button>
     </div>
     <div id="admin-body"></div>`;
@@ -25,6 +30,7 @@ export async function renderAdmin(root: HTMLElement, onChange: () => void) {
   );
   const body = root.querySelector("#admin-body") as HTMLElement;
   if (tab === "jogos") await renderJogos(body, onChange);
+  else if (tab === "sugestoes") await renderSugestoes(body, root, onChange);
   else await renderMembros(body);
 }
 
@@ -44,7 +50,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
     <h2 class="section">Novo jogo</h2>
     <div class="form-grid" id="new-form">
       <label>id (slug)<input id="n-id" placeholder="ex: final-fantasy-x"></label>
-      <label>título<input id="n-title"></label>
+      <label>título<input id="n-title" value="${esc(prefillTitle)}"></label>
       <label>console<select id="n-console">${CONSOLES.map((c) => `<option>${c}</option>`).join("")}</select></label>
       <label>ano<input id="n-year" type="number"></label>
       <label>youtube_id<input id="n-yt"></label>
@@ -56,6 +62,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
     <div class="commit-row"><button class="commit-btn" id="add-game">ADICIONAR</button></div>
     <div class="err" id="admin-err" hidden></div>`;
 
+  prefillTitle = "";
   const tbody = body.querySelector("#rows") as HTMLElement;
   tbody.innerHTML = games.map(rowHtml).join("");
 
@@ -84,14 +91,16 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
         else save(id, { [f]: v } as Partial<Game>);
       });
     });
-    tr.querySelector(".c-enrich")?.addEventListener("click", async () => {
-      const btn = tr.querySelector(".c-enrich") as HTMLButtonElement;
-      btn.textContent = "…";
+    tr.querySelector(".c-del")?.addEventListener("click", async () => {
+      const g = games.find((x) => x.id === id)!;
+      if (!confirm(`Excluir "${g.title}" de vez? Não dá pra desfazer.`)) return;
+      const err = body.querySelector<HTMLElement>("#admin-err")!;
       try {
-        await enrichGame(games.find((x) => x.id === id)!);
+        await deleteGame(id);
         onChange();
-      } catch {
-        btn.textContent = "erro";
+      } catch (e) {
+        err.textContent = (e as Error).message;
+        err.hidden = false;
       }
     });
   });
@@ -145,8 +154,75 @@ function rowHtml(g: Game): string {
     <td>${inp("wiki_title")}</td>
     <td>${inp("critic_score", "num")}${g.critic_source ? `<small> (${g.critic_source})</small>` : ""}</td>
     <td>${g.cover_url ? "✓" : "—"}</td>
-    <td><button class="ghost-btn c-enrich">re-buscar</button></td>
+    <td><button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button></td>
   </tr>`;
+}
+
+// ----------------------------------------------------------- sugestões
+async function renderSugestoes(body: HTMLElement, root: HTMLElement, onChange: () => void) {
+  const all = await listSuggestions();
+  const pend = all.filter((s) => s.status === "pendente");
+  const done = all.filter((s) => s.status !== "pendente");
+
+  const card = (s: (typeof all)[number], showActions: boolean) => `
+    <li class="review-item" data-id="${s.id}">
+      <div class="head">
+        <span class="who">${esc(s.title)}</span>
+        <span class="club-avg" style="font-size:10px">${
+          { pendente: "⏳", aceita: "✓ vai entrar", recusada: "✕ recusada" }[s.status]
+        }</span>
+      </div>
+      ${s.note ? `<div class="body">${esc(s.note)}</div>` : ""}
+      <div class="body" style="font-size:11px;opacity:.7">— ${esc(s.author)}${
+        s.admin_note ? ` · você: ${esc(s.admin_note)}` : ""
+      }</div>
+      ${
+        showActions
+          ? `<div class="row" style="margin-top:8px">
+               <button class="ghost-btn s-accept">aceitar</button>
+               <button class="ghost-btn s-reject">recusar</button>
+             </div>`
+          : `<div class="row" style="margin-top:8px">
+               ${s.status === "aceita" ? `<button class="ghost-btn s-create">+ criar jogo</button>` : ""}
+               <button class="linkbtn s-del">apagar</button>
+             </div>`
+      }
+    </li>`;
+
+  body.innerHTML = `
+    <h2 class="section" style="margin-top:0">Na fila (${pend.length})</h2>
+    ${pend.length ? `<ul class="review-list">${pend.map((s) => card(s, true)).join("")}</ul>` : `<p class="played-empty">Nada pendente.</p>`}
+    <h2 class="section">Já decididas</h2>
+    ${done.length ? `<ul class="review-list">${done.map((s) => card(s, false)).join("")}</ul>` : `<p class="played-empty">—</p>`}`;
+
+  body.querySelectorAll<HTMLElement>("li[data-id]").forEach((li) => {
+    const id = li.dataset.id!;
+    const sug = all.find((s) => s.id === id)!;
+    li.querySelector(".s-accept")?.addEventListener("click", async () => {
+      const nota = prompt("Comentário pro membro (opcional):") ?? "";
+      await setSuggestionStatus(id, "aceita", nota);
+      renderSugestoes(body, root, onChange);
+      onChange();
+    });
+    li.querySelector(".s-reject")?.addEventListener("click", async () => {
+      const nota = prompt("Por que não? (opcional):") ?? "";
+      await setSuggestionStatus(id, "recusada", nota);
+      renderSugestoes(body, root, onChange);
+      onChange();
+    });
+    li.querySelector(".s-create")?.addEventListener("click", () => {
+      prefillTitle = sug.title;
+      tab = "jogos";
+      renderAdmin(root, onChange);
+    });
+    li.querySelector(".s-del")?.addEventListener("click", async () => {
+      if (confirm("Apagar essa indicação?")) {
+        await deleteSuggestion(id);
+        renderSugestoes(body, root, onChange);
+        onChange();
+      }
+    });
+  });
 }
 
 // -------------------------------------------------------------- membros

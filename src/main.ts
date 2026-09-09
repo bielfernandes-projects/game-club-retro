@@ -5,6 +5,9 @@ import { listGames } from "./data/games";
 import { listRounds, createRound, closeRound, archiveRound } from "./data/rounds";
 import { reviewAverages, listReviews, upsertReview, type ReviewWithAuthor } from "./data/reviews";
 import { redeemInvite } from "./data/members";
+import {
+  listSuggestions, createSuggestion, deleteSuggestion, type SuggestionWithAuthor,
+} from "./data/suggestions";
 import { eligibleGames, drawGame } from "./data/draw";
 import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml } from "./components";
 import { ytEmbed } from "./emu";
@@ -21,6 +24,7 @@ let session: Session | null = null;
 let games: Game[] = [];
 let rounds: Round[] = [];
 let averages = new Map<string, { avg: number; n: number }>();
+let suggestions: SuggestionWithAuthor[] = [];
 let candidate: Game | null = null;
 let busy = false;
 
@@ -33,14 +37,16 @@ const isMember = () => session?.role != null;
 
 async function loadState() {
   session = await currentSession();
-  const [g, r, avg] = await Promise.all([
-    listGames({ includeInactive: session?.role === "admin" }),
+  const [g, r, avg, sug] = await Promise.all([
+    listGames(), // homepage: só jogos ativos, inclusive pro admin
     listRounds(),
     reviewAverages(),
+    listSuggestions().catch(() => [] as SuggestionWithAuthor[]),
   ]);
   games = g;
   rounds = r;
   averages = avg;
+  suggestions = sug;
 }
 
 // ======================================================================
@@ -135,6 +141,9 @@ function renderStage(stage: HTMLElement) {
   // --- catálogo ---
   parts.push(catalogHtml(games, playedIds(), archivedIds(), averages));
 
+  // --- indique seu jogo ---
+  parts.push(suggestionsSectionHtml());
+
   parts.push(`<footer><p class="rules">${games.filter((g) => g.active).length} clássicos na curadoria · ${playedIds().size} já jogados</p></footer>`);
 
   stage.innerHTML = parts.join("");
@@ -142,6 +151,82 @@ function renderStage(stage: HTMLElement) {
   if (round && round.status === "avaliando") {
     void renderReviewBox(round, stage);
   }
+  wireSuggestions(stage);
+}
+
+const SUG_STATUS: Record<string, string> = {
+  pendente: "⏳ na fila",
+  aceita: "✓ vai entrar",
+  recusada: "✕ recusada",
+};
+
+function suggestionsSectionHtml(): string {
+  const form = isMember()
+    ? `<div class="review-form" style="margin-top:12px">
+        <input type="text" id="sug-title" maxlength="120" placeholder="Nome do jogo (ex: Chrono Cross)">
+        <textarea id="sug-note" maxlength="500" placeholder="Por que esse? (opcional)"></textarea>
+        <div class="row"><button class="commit-btn" id="sug-send">INDICAR</button></div>
+        <div class="err" id="sug-err" hidden></div>
+      </div>`
+    : `<p class="notice" style="margin-top:12px"><a href="#/entrar">Entre</a> como membro pra indicar um jogo.</p>`;
+
+  const list = suggestions.length
+    ? `<ul class="review-list" style="margin-top:16px">${suggestions
+        .map((s) => {
+          const canDel = session && (session.userId === s.suggested_by || isAdmin());
+          return `<li class="review-item">
+            <div class="head">
+              <span class="who">${esc(s.title)}</span>
+              <span class="club-avg" style="font-size:10px">${SUG_STATUS[s.status] ?? s.status}</span>
+            </div>
+            ${s.note ? `<div class="body">${esc(s.note)}</div>` : ""}
+            <div class="body" style="font-size:11px;opacity:.7">— ${esc(s.author)}${
+              s.admin_note ? ` · admin: ${esc(s.admin_note)}` : ""
+            }${canDel ? ` · <button class="linkbtn sug-del" data-id="${s.id}">apagar</button>` : ""}</div>
+          </li>`;
+        })
+        .join("")}</ul>`
+    : `<p class="played-empty" style="margin-top:12px">Ninguém indicou nada ainda.</p>`;
+
+  return `<div class="review-box" style="margin-top:24px">
+    <h2 class="section" style="margin-top:0">💡 Indique seu jogo</h2>
+    <p class="sub" style="margin:0">A galera coloca aqui o que quer jogar; o admin decide o que entra na curadoria.</p>
+    ${form}
+    ${list}
+  </div>`;
+}
+
+function wireSuggestions(stage: HTMLElement) {
+  stage.querySelector("#sug-send")?.addEventListener("click", async () => {
+    const title = (stage.querySelector("#sug-title") as HTMLInputElement)?.value ?? "";
+    const note = (stage.querySelector("#sug-note") as HTMLTextAreaElement)?.value ?? "";
+    const err = stage.querySelector<HTMLElement>("#sug-err")!;
+    if (title.trim().length < 2) {
+      err.textContent = "Escreve o nome do jogo.";
+      err.hidden = false;
+      return;
+    }
+    err.hidden = true;
+    try {
+      await createSuggestion(title, note, session!.userId);
+      await refresh();
+    } catch (e) {
+      err.textContent = "Não deu: " + (e as Error).message;
+      err.hidden = false;
+    }
+  });
+  stage.querySelectorAll<HTMLElement>(".sug-del").forEach((b) =>
+    b.addEventListener("click", async () => {
+      if (confirm("Apagar essa indicação?")) {
+        try {
+          await deleteSuggestion(b.dataset.id!);
+          await refresh();
+        } catch (e) {
+          alert("Erro: " + (e as Error).message);
+        }
+      }
+    }),
+  );
 }
 
 // ======================================================================
@@ -504,6 +589,7 @@ function subscribeRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "rounds" }, () => refresh())
     .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => refresh())
     .on("postgres_changes", { event: "*", schema: "public", table: "games" }, () => refresh())
+    .on("postgres_changes", { event: "*", schema: "public", table: "suggestions" }, () => refresh())
     .subscribe();
 }
 

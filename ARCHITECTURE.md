@@ -18,6 +18,7 @@ player de vídeo do YouTube; nota de crítica da RAWG (via `api/enrich`, chave n
 | `games` | catálogo (49 no seed) + `featured`, `active`, `cover_url`, `critic_score` | só `is_admin()` |
 | `rounds` | `game_id` + `status` (`jogando`→`avaliando`→`arquivada`) | só `is_admin()` |
 | `reviews` | `round_id` + `member_id` + `rating` (1–5) + `body` (≤280) | o próprio autor, **e** só se a rodada está `avaliando` |
+| `suggestions` | jogo que um membro quer (`title` + `note` + `status` pendente/aceita/recusada) | membro cria a própria; admin muda `status`; autor ou admin apaga |
 
 Leitura de `games`/`rounds`/`reviews`/`profiles` é **pública** (`anon` + `authenticated`).
 
@@ -77,6 +78,18 @@ Capa: `en.wikipedia.org/api/rest_v1/page/summary`. Crítica: `api.rawg.io/api/ga
 - **Sorteio no cliente** — ver ADR 0002.
 - **Animação de slot** parece lenta se a aba do Chrome está em segundo plano (o navegador
   estrangula `setTimeout`). Com a aba na frente são ~2s.
+
+## Indique seu jogo
+
+Seção na home (`suggestionsSectionHtml`): membro logado sugere `title` + motivo; a lista é
+pública. No `#/admin` → **Sugestões**, o admin **aceita** (com "+ criar jogo" que pré-preenche
+o formulário de Novo Jogo) ou **recusa**, com um comentário opcional. Realtime.
+
+## Excluir jogo
+
+`#/admin` → Jogos → **excluir** (hard delete). Se o jogo já foi rodada, o FK
+`rounds.game_id → games.id` bloqueia e a UI avisa pra deixar inativo em vez de excluir.
+O toggle `ativo` continua: jogo inativo some da home e do sorteio, mas fica no admin.
 
 ## Como adicionar um jogo
 

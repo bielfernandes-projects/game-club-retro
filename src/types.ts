@@ -45,6 +45,19 @@ export interface Profile {
   display_name: string | null;
 }
 
+export type SuggestionStatus = "pendente" | "aceita" | "recusada";
+
+export interface Suggestion {
+  id: string;
+  title: string;
+  note: string | null;
+  suggested_by: string;
+  status: SuggestionStatus;
+  admin_note: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
 /** Sessão do usuário resolvida (auth + papel). */
 export interface Session {
   userId: string;

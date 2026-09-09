@@ -85,3 +85,14 @@ catálogo, ao lado — e claramente separada — da nota de crítica externa.
 
 Um jogo que tem Rodada, em qualquer status. Sai do sorteio pra sempre (a menos que o admin
 apague a Rodada direto no banco).
+
+## Indicação (Suggestion)
+
+Um jogo que um **membro** quer que entre na curadoria: um nome + um motivo opcional. Fica
+`pendente` até o **admin** decidir — `aceita` (e aí o admin cadastra o jogo) ou `recusada`,
+com um comentário opcional. Não é um Jogo até o admin criar.
+
+## Inativo vs. excluído
+
+Um Jogo **inativo** (`ativo = false`) some da home e do sorteio mas continua no painel admin —
+é "fora de rotação por enquanto". **Excluir** apaga de vez; só dá se o jogo nunca foi Rodada.
