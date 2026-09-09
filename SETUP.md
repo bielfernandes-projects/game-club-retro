@@ -30,8 +30,9 @@ Já configurado por API:
     recusa quem não tiver. Sem ela o endpoint fica aberto (baixo risco, mas melhor pôr).
   - `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_URL` (o cron escreve no banco fora do RLS) — conferir
     que existem no Vercel.
-- O cron roda **09:00 UTC** (06:00 BRT) todo dia — ver `vercel.json`. Pra rodar na mão:
-  `node --env-file=.env.local scripts/store-refresh.mjs`.
+- O cron roda **09:00 UTC** (06:00 BRT) todo dia — ver `vercel.json`. Pra forçar: o botão
+  **"buscar todos agora"** no `#/admin` → Loja, ou
+  `curl -H "authorization: Bearer $CRON_SECRET" https://gameclub.bf.dev.br/api/store-refresh`.
 
 ## Falta
 
