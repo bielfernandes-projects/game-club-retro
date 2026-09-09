@@ -126,8 +126,8 @@ export function storeSectionHtml(items: StoreItem[]): string {
         : `<span class="ph"><span class="ph-glyph">?</span><span class="ph-sub">sem foto</span></span>`;
       const price = it.price ? `<div class="s-price">${esc(it.price)}</div>` : "";
       const bits: string[] = [];
-      if (it.rating != null) bits.push(`${Number(it.rating).toFixed(1).replace(".", ",")}★`);
-      if (it.sales != null) bits.push(`${compactPtBr(it.sales)} vendidos`);
+      if (it.rating != null && it.rating > 0) bits.push(`${Number(it.rating).toFixed(1).replace(".", ",")}★`);
+      if (it.sales != null && it.sales > 0) bits.push(`${compactPtBr(it.sales)} vendidos`);
       const meta = bits.length ? `<div class="s-meta">${esc(bits.join(" · "))}</div>` : "";
       return `<div class="store-card">
         ${media}
