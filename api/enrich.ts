@@ -13,11 +13,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let critic_score: number | null = null;
   let critic_source: "rawg" | null = null;
 
+  const UA = "GameClubRetro/1.0 (https://gameclub.bf.dev.br; clube@bf.dev.br)";
+
   if (title) {
+    // 1) REST summary
     try {
       const r = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}?redirect=true`,
-        { headers: { "user-agent": "game-club-retro/1.0 (enrich)" } },
+        { headers: { "user-agent": UA, accept: "application/json" } },
       );
       if (r.ok) {
         const d = (await r.json()) as {
@@ -32,6 +35,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     } catch {
       /* ignora */
+    }
+    // 2) fallback: action API pageimages
+    if (!cover_url) {
+      try {
+        const u =
+          `https://en.wikipedia.org/w/api.php?action=query&format=json&redirects=1&prop=pageimages` +
+          `&piprop=original%7Cthumbnail&pithumbsize=600&titles=${encodeURIComponent(title)}`;
+        const r = await fetch(u, { headers: { "user-agent": UA } });
+        if (r.ok) {
+          const d = (await r.json()) as {
+            query?: { pages?: Record<string, { original?: { source?: string }; thumbnail?: { source?: string } }> };
+          };
+          const p = Object.values(d.query?.pages ?? {})[0];
+          cover_url = p?.original?.source || p?.thumbnail?.source || null;
+        }
+      } catch {
+        /* ignora */
+      }
     }
   }
 
