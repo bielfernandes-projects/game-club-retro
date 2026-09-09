@@ -139,7 +139,9 @@ function renderStage(stage: HTMLElement) {
 
   stage.innerHTML = parts.join("");
 
-  if (round && round.status === "avaliando") renderReviewBox(round);
+  if (round && round.status === "avaliando") {
+    void renderReviewBox(round, stage);
+  }
 }
 
 // ======================================================================
@@ -302,10 +304,16 @@ function openModal(g: Game) {
 // ======================================================================
 // Avaliações
 // ======================================================================
-async function renderReviewBox(round: Round) {
-  const box = document.getElementById("review-box");
+async function renderReviewBox(round: Round, container: ParentNode = document) {
+  const box = container.querySelector<HTMLElement>("#review-box");
   if (!box) return;
-  const reviews = await listReviews(round.id);
+  let reviews: ReviewWithAuthor[];
+  try {
+    reviews = await listReviews(round.id);
+  } catch (e) {
+    box.innerHTML = `<div class="err">Não deu pra carregar as avaliações: ${esc((e as Error).message)}</div>`;
+    return;
+  }
   const mine = session ? reviews.find((r) => r.member_id === session!.userId) : undefined;
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
 
