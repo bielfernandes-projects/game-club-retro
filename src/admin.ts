@@ -264,8 +264,8 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       <td>${inp("rating", "num")}</td>
       <td>${inp("sales", "num")}</td>
       <td>${it.commission != null ? `${Number(it.commission).toFixed(1)}%` : "—"}</td>
-      <td>${it.image_url ? `<img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" style="width:40px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle">` : "—"}</td>
-      <td style="font-size:10px;color:var(--muted)">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">link</a>` : "—"} · ${when}</td>
+      <td>${it.image_url ? `<img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" style="width:32px;height:32px;object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:4px">` : ""}${inp("image_url")}</td>
+      <td>${inp("url")}${it.url ? ` <a href="${esc(it.url)}" target="_blank" rel="noopener" style="font-size:10px">↗</a>` : ""}<br><span style="font-size:10px;color:var(--muted)">${when}</span></td>
       <td>
         <button class="ghost-btn s-refetch">buscar</button>
         <button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button>
@@ -274,19 +274,26 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
   };
 
   body.innerHTML = `
-    <p class="sub" style="margin:0 0 10px">${items.length} itens. Um cron diário pega, pra cada <b>busca</b>, o resultado mais relevante da Shopee (subId "gameclub"). Editar um campo salva ao sair dele; a ordem na página da Loja segue a coluna <b>ordem</b>.</p>
+    <p class="sub" style="margin:0 0 10px">${items.length} itens. "buscar todos agora" pega, pra cada <b>busca</b>, o resultado mais relevante de vendedor BR na Shopee (subId "gameclub"). Editar um campo salva ao sair dele; a ordem na página da Loja segue a coluna <b>ordem</b>.</p>
     <div class="commit-row" style="margin-top:0"><button class="ghost-btn" id="s-all">buscar todos agora</button></div>
     <div class="table-scroll"><table class="table">
       <thead><tr>
         <th>ativo</th><th>ordem</th><th>nome (card)</th><th>busca</th><th>preço</th><th>nota</th>
-        <th>vend.</th><th>comis.</th><th>foto</th><th>link · atualizado</th><th></th>
+        <th>vend.</th><th>comis.</th><th>imagem (url)</th><th>link de afiliado</th><th></th>
       </tr></thead>
       <tbody id="s-rows">${items.map(row).join("")}</tbody>
     </table></div>
     <h2 class="section">Novo item</h2>
+    <p class="sub" style="margin:0 0 8px">Só o <b>nome</b> é obrigatório. Cole um <b>link da Shopee</b> pra puxar tudo, ou preencha um <b>termo de busca</b>, ou os campos na mão. O que você digitar aqui manda por cima do que a Shopee devolver.</p>
     <div class="form-grid">
-      <label>nome no card<input id="s-label" placeholder="ex: Console R36S"></label>
+      <label>nome no card *<input id="s-label" placeholder="ex: Console R36S"></label>
       <label>termo de busca na Shopee<input id="s-kw" placeholder="ex: Console R36S"></label>
+      <label style="grid-column:1/-1">link do produto na Shopee<input id="s-link" placeholder="https://shopee.com.br/... ou https://s.shopee.com.br/..."></label>
+      <label>preço<input id="s-price" placeholder="R$ 0,00"></label>
+      <label>nota (0–5)<input id="s-rating" type="number" step="0.1" min="0" max="5"></label>
+      <label>vendidos<input id="s-sales" type="number" min="0"></label>
+      <label style="grid-column:1/-1">url da imagem<input id="s-img" placeholder="https://..."></label>
+      <label style="grid-column:1/-1">link de afiliado (fica no botão do card)<input id="s-url" placeholder="https://s.shopee.com.br/..."></label>
     </div>
     <div class="commit-row"><button class="commit-btn" id="s-add">ADICIONAR</button></div>
     <div class="err" id="store-err" hidden></div>`;
@@ -316,8 +323,13 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
         if (f === "sort_order") v = Number(raw) || 0;
         else if (f === "rating") v = raw === "" ? null : Number(raw.replace(",", "."));
         else if (f === "sales") v = raw === "" ? null : Number(raw.replace(/\D/g, ""));
-        else if (f === "price" || f === "keyword") v = raw === "" ? null : raw;
-        save(id, { [f]: v } as Partial<StoreItem>);
+        else if (f === "price" || f === "keyword" || f === "image_url" || f === "url")
+          v = raw === "" ? null : raw;
+        if ((f === "url" || f === "image_url") && v && !/^https?:\/\//i.test(v as string)) {
+          showErr(`${f}: precisa começar com http:// ou https://`);
+          return;
+        }
+        save(id, { [f]: v } as Partial<StoreItem>).catch((e) => showErr((e as Error).message));
       });
     });
     tr.querySelector<HTMLButtonElement>(".s-refetch")?.addEventListener("click", async (e) => {
@@ -385,22 +397,44 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
   });
 
   body.querySelector("#s-add")?.addEventListener("click", async () => {
-    const label = (body.querySelector("#s-label") as HTMLInputElement).value.trim();
-    const keyword = (body.querySelector("#s-kw") as HTMLInputElement).value.trim();
+    const val = (id: string) => (body.querySelector(`#${id}`) as HTMLInputElement).value.trim();
+    const label = val("s-label");
     if (!label) {
       showErr("Dá um nome pro card.");
       return;
     }
+    const keyword = val("s-kw");
+    const prodLink = val("s-link");
+    for (const [id, name] of [["s-link", "link do produto"], ["s-img", "url da imagem"], ["s-url", "link de afiliado"]] as const) {
+      const v = val(id);
+      if (v && !/^https?:\/\//i.test(v)) {
+        showErr(`${name}: precisa começar com http:// ou https://`);
+        return;
+      }
+    }
     const btn = body.querySelector("#s-add") as HTMLButtonElement;
     btn.disabled = true;
-    btn.textContent = "buscando…";
+    btn.textContent = "salvando…";
     try {
-      let patch: Partial<StoreItem> = {};
-      if (keyword) {
-        patch = offerPatch(await fetchShopeeProduct({ keyword }).catch(() => null));
-        if (Object.keys(patch).length) patch.refreshed_at = new Date().toISOString();
-      }
-      await upsertStoreItem({ label, keyword: keyword || null, sort_order: items.length, ...patch });
+      // 1) base: link colado > termo de busca (só se não deu nada manual pra url)
+      let base: Partial<StoreItem> = {};
+      if (prodLink) base = offerPatch(await fetchShopeeProduct({ url: prodLink }).catch(() => null));
+      else if (keyword && !val("s-url")) base = offerPatch(await fetchShopeeProduct({ keyword }).catch(() => null));
+      if (Object.keys(base).length) base.refreshed_at = new Date().toISOString();
+      // 2) overrides manuais (só o que foi digitado)
+      const man: Partial<StoreItem> = {};
+      if (val("s-price")) man.price = val("s-price");
+      if (val("s-rating")) man.rating = Number(val("s-rating").replace(",", "."));
+      if (val("s-sales")) man.sales = Number(val("s-sales").replace(/\D/g, ""));
+      if (val("s-img")) man.image_url = val("s-img");
+      if (val("s-url")) man.url = val("s-url");
+      await upsertStoreItem({
+        label,
+        keyword: keyword || null,
+        sort_order: items.length,
+        ...base,
+        ...man,
+      });
       renderLoja(body, onChange);
       onChange();
     } catch (ex) {
