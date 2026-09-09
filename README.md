@@ -13,7 +13,9 @@ trailer e links de emulador/ROM; e depois cada membro **avalia** o jogo.
 | **membro** (na allowlist) | tudo acima + **avaliar** (nota 1–5 + crítica) quando o mês fecha |
 | **admin** | sortear, controlar as rodadas, CRUD dos jogos, gerenciar a allowlist |
 
-Login é por **magic link** — só e-mails que o admin cadastrou.
+Login é por **magic link**. Membro novo entra sozinho com o **link de convite** que o admin
+compartilha no grupo (`#/admin` → Membros → Link de convite); o admin também pode adicionar
+e-mails na mão.
 
 ## Ciclo mensal
 

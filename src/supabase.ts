@@ -15,6 +15,7 @@ export const supabase = createClient(url, key, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: "pkce",
+    // implicit: o magic link volta com #access_token no hash (fluxo padrão de SPA)
+    flowType: "implicit",
   },
 });

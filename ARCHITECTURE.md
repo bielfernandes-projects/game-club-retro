@@ -13,6 +13,7 @@ player de vídeo do YouTube; nota de crítica da RAWG (via `api/enrich`, chave n
 | Tabela | O quê | Escrita liberada pra |
 |---|---|---|
 | `allowlist` | `email` → `role` (`admin`\|`membro`) | só `is_admin()` |
+| `club_config` | config chave→valor (hoje só `invite_code`) | só `is_admin()` (o RPC lê via definer) |
 | `profiles` | perfil (id = `auth.users.id`), criado no 1º login por trigger | o próprio (só `display_name`) |
 | `games` | catálogo (49 no seed) + `featured`, `active`, `cover_url`, `critic_score` | só `is_admin()` |
 | `rounds` | `game_id` + `status` (`jogando`→`avaliando`→`arquivada`) | só `is_admin()` |
@@ -26,7 +27,10 @@ Leitura de `games`/`rounds`/`reviews`/`profiles` é **pública** (`anon` + `auth
   booleano sobre o chamador (juntam `profiles` × `allowlist`). Expostas como RPC.
 - `handle_new_user()` — trigger em `auth.users`: cria o `profiles` (nome = parte antes do `@`).
 - `hook_before_user_created(event jsonb)` — **auth hook**: rejeita signup de e-mail fora da
-  allowlist. Criado na migration; **registrar** é passo de dashboard/Management API (SETUP.md).
+  allowlist. Registrado via Management API (`scripts/setup-auth.mjs`).
+- `redeem_invite(email, code)` — `security definer`, chamável por `anon`: se o código bate o
+  `club_config.invite_code`, insere o e-mail na allowlist como `membro`. O cliente chama isso
+  antes do `signInWithOtp` no fluxo de convite.
 - `enforce_single_active_round()` — trigger: no máx. uma Rodada não-arquivada.
 - Realtime: `rounds`, `reviews`, `games` na publication `supabase_realtime`.
 

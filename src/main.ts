@@ -4,6 +4,7 @@ import { currentSession, sendMagicLink, signOut, updateDisplayName, onAuthChange
 import { listGames } from "./data/games";
 import { listRounds, createRound, closeRound, archiveRound } from "./data/rounds";
 import { reviewAverages, listReviews, upsertReview, type ReviewWithAuthor } from "./data/reviews";
+import { redeemInvite } from "./data/members";
 import { eligibleGames, drawGame } from "./data/draw";
 import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml } from "./components";
 import { ytEmbed } from "./emu";
@@ -46,8 +47,10 @@ async function loadState() {
 // Render
 // ======================================================================
 async function render() {
-  const route = location.hash.replace(/^#\/?/, "") || "";
-  if (route === "entrar") return app.replaceChildren(loginView());
+  const raw = location.hash.replace(/^#\/?/, "");
+  const [route, query] = raw.split("?");
+  const params = new URLSearchParams(query || "");
+  if (route === "entrar") return app.replaceChildren(loginView(params.get("code")));
   if (route === "perfil") return app.replaceChildren(profileView());
   if (route === "admin") {
     if (!isAdmin()) {
@@ -378,32 +381,52 @@ function wireReviewForm(box: HTMLElement, round: Round, initial: number) {
 // ======================================================================
 // Login / perfil
 // ======================================================================
-function loginView(): HTMLElement {
+function loginView(inviteCode?: string | null): HTMLElement {
   const el = document.createElement("div");
   el.appendChild(topbar());
+  const withInvite = !!inviteCode;
   el.insertAdjacentHTML(
     "beforeend",
     `<div class="login-card">
       <div class="kicker">GAME CLUB RETRÔ</div>
       <h2 class="section">Entrar</h2>
-      <p class="sub" style="margin:0">Só e-mails que o admin liberou. Você recebe um link mágico.</p>
+      <p class="sub" style="margin:0">${
+        withInvite
+          ? "Você tem um convite do clube. Coloque seu e-mail e pronto."
+          : "Coloque seu e-mail — você recebe um link mágico. Membros novos precisam de um código de convite (peça no grupo)."
+      }</p>
       <input type="email" id="email" placeholder="seu@email.com" autocomplete="email">
+      <input type="text" id="code" placeholder="código de convite (se for novo)" value="${esc(inviteCode ?? "")}"${withInvite ? " hidden" : ""}>
       <div class="commit-row"><button class="commit-btn" id="send">MANDAR LINK</button></div>
       <div class="toast" id="lg-msg"></div>
     </div>`,
   );
   el.querySelector("#send")?.addEventListener("click", async () => {
     const email = (el.querySelector("#email") as HTMLInputElement).value.trim();
+    const code = (el.querySelector("#code") as HTMLInputElement).value.trim();
     const msg = el.querySelector("#lg-msg") as HTMLElement;
     if (!/.+@.+\..+/.test(email)) {
       msg.textContent = "E-mail inválido.";
       return;
     }
     msg.textContent = "Enviando...";
-    const { error } = await sendMagicLink(email);
-    msg.textContent = error
-      ? "Erro: " + error.message
-      : "Link enviado! Confere seu e-mail (e o spam).";
+    try {
+      if (code) {
+        const ok = await redeemInvite(email, code);
+        if (!ok) {
+          msg.textContent = "Código de convite inválido.";
+          return;
+        }
+      }
+      const { error } = await sendMagicLink(email);
+      msg.textContent = error
+        ? error.message.includes("not on the")
+          ? "Esse e-mail ainda não é do clube. Use um código de convite."
+          : "Erro: " + error.message
+        : "Link enviado! Confere seu e-mail (e o spam).";
+    } catch (e) {
+      msg.textContent = "Erro: " + (e as Error).message;
+    }
   });
   return el;
 }
@@ -474,10 +497,21 @@ function subscribeRealtime() {
     .subscribe();
 }
 
+function cleanAuthHash() {
+  if (/access_token=|error=|type=magiclink/.test(location.hash)) {
+    history.replaceState(null, "", location.pathname + "#/");
+  }
+}
+
 async function boot() {
   window.addEventListener("hashchange", () => render());
-  onAuthChange(() => refresh());
+  onAuthChange(() => {
+    cleanAuthHash();
+    refresh();
+  });
   subscribeRealtime();
+  await supabase.auth.getSession(); // processa o #access_token do magic link
+  cleanAuthHash();
   await refresh();
 }
 

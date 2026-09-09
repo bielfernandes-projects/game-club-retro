@@ -1,6 +1,9 @@
 import type { ConsoleCode, Game, Role } from "./types";
 import { listGames, upsertGame, setGameActive, setGameFeatured, enrichGame } from "./data/games";
-import { listAllowlist, addMember, removeMember, setMemberRole } from "./data/members";
+import {
+  listAllowlist, addMember, removeMember, setMemberRole,
+  getInviteCode, setInviteCode,
+} from "./data/members";
 import { esc } from "./components";
 
 const CONSOLES: ConsoleCode[] = ["SNES", "MD", "N64", "PS1", "GBA", "GBC"];
@@ -148,8 +151,24 @@ function rowHtml(g: Game): string {
 
 // -------------------------------------------------------------- membros
 async function renderMembros(body: HTMLElement) {
-  const list = await listAllowlist();
+  const [list, code] = await Promise.all([listAllowlist(), getInviteCode().catch(() => null)]);
+  const inviteLink = code ? `${location.origin}/#/entrar?code=${code}` : "";
   body.innerHTML = `
+    <h2 class="section" style="margin-top:0">Link de convite</h2>
+    <p class="sub" style="margin:0 0 8px">Manda esse link no grupo — quem tem o link se cadastra sozinho (vira membro).</p>
+    <div class="form-grid">
+      <label style="grid-column:1/-1">link
+        <input id="inv-link" readonly value="${esc(inviteLink)}">
+      </label>
+      <label>código atual<input id="inv-code" value="${esc(code ?? "")}"></label>
+    </div>
+    <div class="commit-row">
+      <button class="ghost-btn" id="inv-copy">copiar link</button>
+      <button class="ghost-btn" id="inv-save">salvar código</button>
+      <button class="ghost-btn" id="inv-gen">gerar novo</button>
+    </div>
+
+    <h2 class="section">Membros</h2>
     <p class="sub" style="margin:0 0 10px">Só quem está aqui consegue logar. O nome cada um edita no próprio perfil.</p>
     <div class="table-scroll"><table class="table">
       <thead><tr><th>e-mail</th><th>papel</th><th>entrou?</th><th></th></tr></thead>
@@ -174,6 +193,19 @@ async function renderMembros(body: HTMLElement) {
     </div>
     <div class="commit-row"><button class="commit-btn" id="m-add">ADICIONAR À LISTA</button></div>
     <div class="err" id="m-err" hidden></div>`;
+
+  body.querySelector("#inv-copy")?.addEventListener("click", () => {
+    navigator.clipboard?.writeText(inviteLink);
+    (body.querySelector("#inv-copy") as HTMLElement).textContent = "copiado!";
+  });
+  body.querySelector("#inv-save")?.addEventListener("click", async () => {
+    const v = (body.querySelector("#inv-code") as HTMLInputElement).value.trim();
+    if (v) { await setInviteCode(v); renderMembros(body); }
+  });
+  body.querySelector("#inv-gen")?.addEventListener("click", async () => {
+    await setInviteCode(Math.random().toString(36).slice(2, 10));
+    renderMembros(body);
+  });
 
   body.querySelectorAll<HTMLElement>("tr[data-email]").forEach((tr) => {
     const email = tr.dataset.email!;
