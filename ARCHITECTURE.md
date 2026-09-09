@@ -87,10 +87,14 @@ idle ──SORTEAR──▶ animação slot ──▶ candidato (capa + pôster 
 
 ## Carregamento de mídia
 
-**Capas** — `coverFor(game)` consulta a API MediaWiki (`generator=search` + `prop=pageimages`,
-`piprop=thumbnail`, `origin=*` para CORS anônimo), primeiro na Wikipédia PT, depois na EN.
-Resultado (URL ou `null`) é cacheado em memória por sessão. Sem imagem → placeholder com
-console + ano.
+**Capas** — cada jogo tem em `WIKI` o **título exato do artigo na Wikipédia EN**.
+`coverFor(game)` chama `en.wikipedia.org/api/rest_v1/page/summary/<título>` e usa a imagem
+principal do artigo (`originalimage` quando tem ≤1200px, senão `thumbnail`). Resultado (URL ou
+`null`) é cacheado em memória por sessão. Sem imagem → placeholder com console + ano.
+
+Títulos fixos em vez de busca porque a busca da Wikipédia erra muito (retorna página de
+franquia, de gênero ou do remake). A caixa da capa não força proporção, então imagens quadradas
+(logos) ou retrato (box art) aparecem sem barras pretas.
 
 **Trailer** — nunca carrega o `<iframe>` no load (isso dispara o erro 150/153, principalmente
 via `file://`). Mostra um `<button>` com a thumbnail do YouTube; o clique troca pelo player com
@@ -125,5 +129,6 @@ na `main` gera um deploy de produção. Domínio `gameclub.bf.dev.br` (DNS geren
 ## Como adicionar um jogo
 
 1. Adicione um objeto ao array `GAMES` em `index.html` com um `id` novo e um `yt` real.
-2. Para sequências, defina `series` (mesma string do jogo anterior) e `order`.
-3. Confira no console do navegador que os `console.assert` continuam passando.
+2. Adicione uma entrada em `WIKI` com o mesmo `id` → título exato do artigo na Wikipédia EN.
+3. Para sequências, defina `series` (mesma string do jogo anterior) e `order`.
+4. Confira no console do navegador que os `console.assert` continuam passando.

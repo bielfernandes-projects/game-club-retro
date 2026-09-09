@@ -548,6 +548,38 @@
       p:"O tático que apresentou a série ao Ocidente — permadeath e roteiro denso." }
   ];
 
+  // Título exato do artigo na Wikipédia EN — a capa vem da imagem principal desse artigo.
+  const WIKI = {
+    "chrono-trigger":"Chrono Trigger", "chrono-cross":"Chrono Cross",
+    "zelda-alttp":"The Legend of Zelda: A Link to the Past",
+    "zelda-oot":"The Legend of Zelda: Ocarina of Time",
+    "zelda-mm":"The Legend of Zelda: Majora's Mask",
+    "zelda-la":"The Legend of Zelda: Link's Awakening",
+    "zelda-minish":"The Legend of Zelda: The Minish Cap",
+    "zelda-ages":"The Legend of Zelda: Oracle of Ages and Oracle of Seasons",
+    "ff6":"Final Fantasy VI", "ff7":"Final Fantasy VII", "ff8":"Final Fantasy VIII", "ff9":"Final Fantasy IX",
+    "fft":"Final Fantasy Tactics", "tactics-ogre":"Tactics Ogre: Let Us Cling Together",
+    "super-metroid":"Super Metroid", "metroid-fusion":"Metroid Fusion", "metroid-zm":"Metroid: Zero Mission",
+    "secret-of-mana":"Secret of Mana", "earthbound":"EarthBound", "mother3":"Mother 3",
+    "terranigma":"Terranigma", "illusion-of-gaia":"Illusion of Gaia",
+    "lufia2":"Lufia II: Rise of the Sinistrals",
+    "sotn":"Castlevania: Symphony of the Night", "castlevania-aos":"Castlevania: Aria of Sorrow",
+    "mgs1":"Metal Gear Solid (video game)",
+    "re1":"Resident Evil (1996 video game)", "re2":"Resident Evil 2 (1998 video game)",
+    "re3":"Resident Evil 3: Nemesis",
+    "silent-hill":"Silent Hill (video game)", "dino-crisis":"Dino Crisis (video game)",
+    "parasite-eve":"Parasite Eve (video game)", "parasite-eve-2":"Parasite Eve II",
+    "xenogears":"Xenogears", "vagrant-story":"Vagrant Story", "grandia":"Grandia (video game)",
+    "legend-dragoon":"The Legend of Dragoon", "wild-arms":"Wild Arms (video game)",
+    "lunar-sssc":"Lunar: Silver Star Story Complete",
+    "suikoden1":"Suikoden (video game)", "suikoden2":"Suikoden II",
+    "tomb-raider":"Tomb Raider (1996 video game)",
+    "golden-sun":"Golden Sun (video game)", "golden-sun-2":"Golden Sun: The Lost Age",
+    "pokemon-emerald":"Pokémon Emerald", "pokemon-crystal":"Pokémon Crystal",
+    "phantasy-star-4":"Phantasy Star IV: The End of the Millennium",
+    "shining-force-2":"Shining Force II", "fire-emblem":"Fire Emblem: The Blazing Blade"
+  };
+
   const HKEY = "gcr_jogados_v2";
   const $ = (id) => document.getElementById(id);
   const byId = (id) => GAMES.find((g) => g.id === id);
@@ -599,24 +631,24 @@
 
   async function coverFor(g) {
     if (g.id in coverCache) return coverCache[g.id];
-    const url =
-      "https://pt.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&origin=*&gsrsearch=" +
-      encodeURIComponent(g.t + " jogo eletrônico");
-    const fallbackUrl =
-      "https://en.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=520&redirects=1&origin=*&gsrsearch=" +
-      encodeURIComponent(g.t + " video game");
-    for (const u of [url, fallbackUrl]) {
-      try {
-        const r = await fetch(u, { credentials: "omit" });
-        const d = await r.json();
-        const pages = d && d.query && d.query.pages;
-        const first = pages && Object.values(pages)[0];
-        const src = first && first.thumbnail && first.thumbnail.source;
-        if (src) { coverCache[g.id] = src; return src; }
-      } catch { /* tenta o próximo */ }
-    }
     coverCache[g.id] = null;
-    return null;
+    const title = WIKI[g.id];
+    if (!title) return null;
+    try {
+      const r = await fetch(
+        "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title) + "?redirect=true",
+        { credentials: "omit" }
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      const oi = d.originalimage, th = d.thumbnail;
+      // prefere a original quando é pequena (arte de capa costuma ter <1200px); senão o thumbnail
+      const src = (oi && oi.width && oi.width <= 1200 && oi.source) || (th && th.source) || null;
+      coverCache[g.id] = src;
+      return src;
+    } catch {
+      return null;
+    }
   }
 
   function renderMedia(g) {
@@ -939,6 +971,7 @@
   console.assert(new Set(GAMES.map((g) => g.id)).size === GAMES.length, "ids únicos");
   console.assert(GAMES.every((g) => !g.series || (typeof g.order === "number")), "saga tem order");
   console.assert(GAMES.every((g) => !g.yt || /^[\w-]{11}$/.test(g.yt)), "yt id tem 11 chars");
+  console.assert(GAMES.every((g) => WIKI[g.id]), "todo jogo tem artigo na Wikipédia");
   console.assert(GAMES.filter((g) => g.c === "PS2").length === 0, "nada de PS2");
   console.assert([el.modalBackdrop, el.modalClose, el.modalUndo, el.confetti].every(Boolean), "modal montado");
   // sagas: o próximo nível só libera com TODOS os anteriores escolhidos
