@@ -29,6 +29,7 @@ let suggestions: SuggestionWithAuthor[] = [];
 let storeItems: StoreItem[] = [];
 let candidate: Game | null = null;
 let busy = false;
+let adminBox: HTMLElement | null = null;
 
 const activeRound = () => rounds.find((r) => r.status !== "arquivada") ?? null;
 const playedIds = () => new Set(rounds.map((r) => r.game_id));
@@ -68,10 +69,20 @@ async function render() {
       location.hash = "#/";
       return;
     }
-    app.replaceChildren(topbar());
-    const box = document.createElement("div");
-    app.appendChild(box);
-    return renderAdmin(box, () => refresh());
+    if (!adminBox || !adminBox.isConnected) {
+      app.replaceChildren(topbar());
+      adminBox = document.createElement("div");
+      app.appendChild(adminBox);
+    }
+    // onChange redesenha só o painel admin e mantém a rolagem — nada de refresh() global.
+    const onChange = async () => {
+      const y = window.scrollY;
+      await loadState();
+      await renderAdmin(adminBox!, onChange);
+      window.scrollTo(0, y);
+    };
+    await loadState();
+    return renderAdmin(adminBox, onChange);
   }
   app.replaceChildren(homeView());
   wireHome();

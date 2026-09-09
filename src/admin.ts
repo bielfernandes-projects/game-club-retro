@@ -71,20 +71,36 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
   const tbody = body.querySelector("#rows") as HTMLElement;
   tbody.innerHTML = games.map(rowHtml).join("");
 
+  const showErr = (msg: string) => {
+    const el = body.querySelector<HTMLElement>("#admin-err")!;
+    el.textContent = msg;
+    el.hidden = false;
+  };
+  // edição inline: grava no banco em silêncio, não redesenha (o valor já está no input/checkbox).
   const save = async (id: string, patch: Partial<Game>) => {
     const g = games.find((x) => x.id === id)!;
-    await upsertGame({ ...g, ...patch });
-    onChange();
+    Object.assign(g, patch);
+    try {
+      await upsertGame({ ...g });
+    } catch (e) {
+      showErr((e as Error).message);
+    }
   };
 
   tbody.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
     const id = tr.dataset.id!;
-    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) =>
-      setGameActive(id, (e.target as HTMLInputElement).checked).then(onChange),
-    );
-    tr.querySelector<HTMLInputElement>(".c-featured")?.addEventListener("change", (e) =>
-      setGameFeatured(id, (e.target as HTMLInputElement).checked).then(onChange),
-    );
+    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) => {
+      const on = (e.target as HTMLInputElement).checked;
+      const g = games.find((x) => x.id === id);
+      if (g) g.active = on;
+      setGameActive(id, on).catch((ex) => showErr((ex as Error).message));
+    });
+    tr.querySelector<HTMLInputElement>(".c-featured")?.addEventListener("change", (e) => {
+      const on = (e.target as HTMLInputElement).checked;
+      const g = games.find((x) => x.id === id);
+      if (g) g.featured = on;
+      setGameFeatured(id, on).catch((ex) => showErr((ex as Error).message));
+    });
     tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-field]").forEach((inp) => {
       inp.addEventListener("blur", () => {
         const f = inp.dataset.field as keyof Game;
@@ -99,19 +115,16 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
     tr.querySelector(".c-del")?.addEventListener("click", async () => {
       const g = games.find((x) => x.id === id)!;
       if (!confirm(`Excluir "${g.title}" de vez? Não dá pra desfazer.`)) return;
-      const err = body.querySelector<HTMLElement>("#admin-err")!;
       try {
         await deleteGame(id);
         onChange();
       } catch (e) {
-        err.textContent = (e as Error).message;
-        err.hidden = false;
+        showErr((e as Error).message);
       }
     });
   });
 
   body.querySelector("#add-game")?.addEventListener("click", async () => {
-    const err = body.querySelector<HTMLElement>("#admin-err")!;
     const val = (s: string) => (body.querySelector(`#${s}`) as HTMLInputElement).value.trim();
     const g = {
       id: val("n-id"),
@@ -129,8 +142,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
       active: true,
     };
     if (!g.id || !g.title || !g.year) {
-      err.textContent = "Preencha id, título e ano.";
-      err.hidden = false;
+      showErr("Preencha id, título e ano.");
       return;
     }
     try {
@@ -138,8 +150,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
       await enrichGame(g as Game).catch(() => {});
       onChange();
     } catch (e) {
-      err.textContent = (e as Error).message;
-      err.hidden = false;
+      showErr((e as Error).message);
     }
   });
 }
