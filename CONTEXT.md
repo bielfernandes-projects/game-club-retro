@@ -92,6 +92,17 @@ Um jogo que um **membro** quer que entre na curadoria: um nome + um motivo opcio
 `pendente` até o **admin** decidir — `aceita` (e aí o admin cadastra o jogo) ou `recusada`,
 com um comentário opcional. Não é um Jogo até o admin criar.
 
+## Loja (Console à venda)
+
+Página (`#/loja`, alcançada por um botão piscante no rodapé da home) com consoles/acessórios
+retrô baratos que a galera pode comprar pra parar de jogar no PC/celular. Cada item tem um
+**nome**, um **termo de busca** e — preenchidos por um robô diário a partir da API de
+Afiliados da Shopee — foto, preço, nota, vendidos e um **link de afiliado** rastreável
+(subId `gameclub`, o clube ganha comissão). O robô pega o resultado **mais relevante** de
+cada busca; se um dia não achar, mantém o do dia anterior. O **admin** gerencia a lista e
+pode forçar a busca; todo campo é editável na mão. É público e **não faz parte do modelo de
+jogo** (não entra em sorteio, catálogo nem rodada).
+
 ## Inativo vs. excluído
 
 Um Jogo **inativo** (`ativo = false`) some da home e do sorteio mas continua no painel admin —

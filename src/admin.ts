@@ -1,4 +1,4 @@
-import type { ConsoleCode, Game, Role } from "./types";
+import type { ConsoleCode, Game, Role, StoreItem } from "./types";
 import {
   listGames, upsertGame, setGameActive, setGameFeatured, enrichGame, deleteGame,
 } from "./data/games";
@@ -7,10 +7,14 @@ import {
   getInviteCode, setInviteCode,
 } from "./data/members";
 import { listSuggestions, setSuggestionStatus, deleteSuggestion } from "./data/suggestions";
+import {
+  listStoreItems, upsertStoreItem, setStoreItemActive, deleteStoreItem, fetchShopeeProduct,
+  type ShopeeProduct,
+} from "./data/store";
 import { esc } from "./components";
 
 const CONSOLES: ConsoleCode[] = ["SNES", "MD", "N64", "PS1", "GBA", "GBC"];
-let tab: "jogos" | "membros" | "sugestoes" = "jogos";
+let tab: "jogos" | "membros" | "sugestoes" | "loja" = "jogos";
 let prefillTitle = "";
 
 export async function renderAdmin(root: HTMLElement, onChange: () => void) {
@@ -19,6 +23,7 @@ export async function renderAdmin(root: HTMLElement, onChange: () => void) {
     <div class="admin-tabs">
       <button data-tab="jogos" class="${tab === "jogos" ? "on" : ""}">Jogos</button>
       <button data-tab="sugestoes" class="${tab === "sugestoes" ? "on" : ""}">Sugestões</button>
+      <button data-tab="loja" class="${tab === "loja" ? "on" : ""}">Loja</button>
       <button data-tab="membros" class="${tab === "membros" ? "on" : ""}">Membros</button>
     </div>
     <div id="admin-body"></div>`;
@@ -31,6 +36,7 @@ export async function renderAdmin(root: HTMLElement, onChange: () => void) {
   const body = root.querySelector("#admin-body") as HTMLElement;
   if (tab === "jogos") await renderJogos(body, onChange);
   else if (tab === "sugestoes") await renderSugestoes(body, root, onChange);
+  else if (tab === "loja") await renderLoja(body, onChange);
   else await renderMembros(body);
 }
 
@@ -222,6 +228,186 @@ async function renderSugestoes(body: HTMLElement, root: HTMLElement, onChange: (
         onChange();
       }
     });
+  });
+}
+
+// ----------------------------------------------------------------- loja
+/** Aplica no item só os campos que a Shopee devolveu preenchidos (nunca apaga com null). */
+function offerPatch(p: ShopeeProduct | null): Partial<StoreItem> {
+  const patch: Partial<StoreItem> = {};
+  if (!p) return patch;
+  if (p.link) patch.url = p.link;
+  if (p.image) patch.image_url = p.image;
+  if (p.title) patch.title = p.title;
+  if (p.price) patch.price = p.price;
+  if (p.rating != null) patch.rating = p.rating;
+  if (p.sales != null) patch.sales = p.sales;
+  if (p.commission != null) patch.commission = p.commission;
+  if (p.item_id != null) patch.item_id = p.item_id;
+  if (p.shop_id != null) patch.shop_id = p.shop_id;
+  return patch;
+}
+
+async function renderLoja(body: HTMLElement, onChange: () => void) {
+  const items = await listStoreItems({ includeInactive: true });
+
+  const row = (it: StoreItem) => {
+    const inp = (f: keyof StoreItem, cls = "") =>
+      `<input class="${cls}" data-field="${f}" value="${esc(it[f] ?? "")}">`;
+    const when = it.refreshed_at ? new Date(it.refreshed_at).toLocaleDateString("pt-BR") : "nunca";
+    return `<tr data-id="${it.id}">
+      <td><input type="checkbox" class="c-active" ${it.active ? "checked" : ""}></td>
+      <td>${inp("sort_order", "num")}</td>
+      <td>${inp("label")}</td>
+      <td>${inp("keyword")}</td>
+      <td>${inp("price")}</td>
+      <td>${inp("rating", "num")}</td>
+      <td>${inp("sales", "num")}</td>
+      <td>${it.commission != null ? `${Number(it.commission).toFixed(1)}%` : "—"}</td>
+      <td>${it.image_url ? `<img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" style="width:40px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle">` : "—"}</td>
+      <td style="font-size:10px;color:var(--muted)">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">link</a>` : "—"} · ${when}</td>
+      <td>
+        <button class="ghost-btn s-refetch">buscar</button>
+        <button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button>
+      </td>
+    </tr>`;
+  };
+
+  body.innerHTML = `
+    <p class="sub" style="margin:0 0 10px">${items.length} itens. Um cron diário pega, pra cada <b>busca</b>, o resultado mais relevante da Shopee (subId "gameclub"). Editar um campo salva ao sair dele; a ordem na página da Loja segue a coluna <b>ordem</b>.</p>
+    <div class="commit-row" style="margin-top:0"><button class="ghost-btn" id="s-all">buscar todos agora</button></div>
+    <div class="table-scroll"><table class="table">
+      <thead><tr>
+        <th>ativo</th><th>ordem</th><th>nome (card)</th><th>busca</th><th>preço</th><th>nota</th>
+        <th>vend.</th><th>comis.</th><th>foto</th><th>link · atualizado</th><th></th>
+      </tr></thead>
+      <tbody id="s-rows">${items.map(row).join("")}</tbody>
+    </table></div>
+    <h2 class="section">Novo item</h2>
+    <div class="form-grid">
+      <label>nome no card<input id="s-label" placeholder="ex: Console R36S"></label>
+      <label>termo de busca na Shopee<input id="s-kw" placeholder="ex: Console R36S"></label>
+    </div>
+    <div class="commit-row"><button class="commit-btn" id="s-add">ADICIONAR</button></div>
+    <div class="err" id="store-err" hidden></div>`;
+
+  const err = body.querySelector<HTMLElement>("#store-err")!;
+  const showErr = (msg: string) => {
+    err.textContent = msg;
+    err.hidden = false;
+  };
+
+  const save = async (id: string, patch: Partial<StoreItem>) => {
+    const it = items.find((x) => x.id === id)!;
+    await upsertStoreItem({ ...it, ...patch });
+    onChange();
+  };
+
+  body.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
+    const id = tr.dataset.id!;
+    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) =>
+      setStoreItemActive(id, (e.target as HTMLInputElement).checked).then(onChange),
+    );
+    tr.querySelectorAll<HTMLInputElement>("[data-field]").forEach((inp) => {
+      inp.addEventListener("blur", () => {
+        const f = inp.dataset.field as keyof StoreItem;
+        const raw = inp.value.trim();
+        let v: unknown = raw;
+        if (f === "sort_order") v = Number(raw) || 0;
+        else if (f === "rating") v = raw === "" ? null : Number(raw.replace(",", "."));
+        else if (f === "sales") v = raw === "" ? null : Number(raw.replace(/\D/g, ""));
+        else if (f === "price" || f === "keyword") v = raw === "" ? null : raw;
+        save(id, { [f]: v } as Partial<StoreItem>);
+      });
+    });
+    tr.querySelector<HTMLButtonElement>(".s-refetch")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const it = items.find((x) => x.id === id)!;
+      const ref = it.keyword
+        ? { keyword: it.keyword }
+        : it.item_id != null && it.shop_id != null
+          ? { itemId: it.item_id, shopId: it.shop_id }
+          : null;
+      if (!ref) {
+        showErr(`"${it.label}": defina um termo de busca primeiro.`);
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = "…";
+      try {
+        const patch = offerPatch(await fetchShopeeProduct(ref));
+        if (Object.keys(patch).length) {
+          patch.refreshed_at = new Date().toISOString();
+          await upsertStoreItem({ ...it, ...patch });
+        } else {
+          showErr(`"${it.label}": nada encontrado agora (mantive o que tinha).`);
+        }
+        renderLoja(body, onChange);
+        onChange();
+      } catch (ex) {
+        showErr((ex as Error).message);
+        btn.disabled = false;
+        btn.textContent = "buscar";
+      }
+    });
+    tr.querySelector(".c-del")?.addEventListener("click", async () => {
+      if (!confirm("Excluir esse item da loja?")) return;
+      try {
+        await deleteStoreItem(id);
+        renderLoja(body, onChange);
+        onChange();
+      } catch (ex) {
+        showErr((ex as Error).message);
+      }
+    });
+  });
+
+  body.querySelector<HTMLButtonElement>("#s-all")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = "buscando…";
+    let miss = 0;
+    for (const it of items) {
+      if (!it.keyword) continue;
+      try {
+        const patch = offerPatch(await fetchShopeeProduct({ keyword: it.keyword }));
+        if (Object.keys(patch).length) {
+          patch.refreshed_at = new Date().toISOString();
+          await upsertStoreItem({ ...it, ...patch });
+        } else miss++;
+      } catch {
+        miss++;
+      }
+    }
+    if (miss) showErr(`${miss} item(ns) sem resultado agora — os antigos foram mantidos.`);
+    renderLoja(body, onChange);
+    onChange();
+  });
+
+  body.querySelector("#s-add")?.addEventListener("click", async () => {
+    const label = (body.querySelector("#s-label") as HTMLInputElement).value.trim();
+    const keyword = (body.querySelector("#s-kw") as HTMLInputElement).value.trim();
+    if (!label) {
+      showErr("Dá um nome pro card.");
+      return;
+    }
+    const btn = body.querySelector("#s-add") as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = "buscando…";
+    try {
+      let patch: Partial<StoreItem> = {};
+      if (keyword) {
+        patch = offerPatch(await fetchShopeeProduct({ keyword }).catch(() => null));
+        if (Object.keys(patch).length) patch.refreshed_at = new Date().toISOString();
+      }
+      await upsertStoreItem({ label, keyword: keyword || null, sort_order: items.length, ...patch });
+      renderLoja(body, onChange);
+      onChange();
+    } catch (ex) {
+      showErr((ex as Error).message);
+      btn.disabled = false;
+      btn.textContent = "ADICIONAR";
+    }
   });
 }
 

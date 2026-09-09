@@ -31,6 +31,14 @@ Jogos em **Destaque** (★, definido pelo admin) contam **3×** no sorteio.
 Clicar em qualquer jogo da lista completa abre a **ficha** dele (capa, trailer, links de
 emulador/ROM e a média do clube, se já foi jogado) — o mesmo pop-up do sorteio.
 
+## Loja
+
+Seção no rodapé da home com consoles/acessórios retrô à venda. Um **cron diário**
+(`api/store-refresh`) busca, pra cada item, a oferta de **maior comissão** na Shopee
+(Affiliate API, subId `gameclub`) e atualiza foto/preço/nota/link. Se num dia não achar nada,
+mantém o do dia anterior. O admin (`#/admin` → Loja) gerencia a lista de termos de busca e
+pode forçar a atualização.
+
 ## Rodar local
 
 ```bash

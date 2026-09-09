@@ -1,5 +1,5 @@
 import "./styles.css";
-import type { Game, Round, Session } from "./types";
+import type { Game, Round, Session, StoreItem } from "./types";
 import { currentSession, sendMagicLink, signOut, updateDisplayName, onAuthChange } from "./auth";
 import { listGames } from "./data/games";
 import { listRounds, createRound, closeRound, archiveRound } from "./data/rounds";
@@ -8,8 +8,9 @@ import { redeemInvite } from "./data/members";
 import {
   listSuggestions, createSuggestion, deleteSuggestion, type SuggestionWithAuthor,
 } from "./data/suggestions";
+import { listStoreItems } from "./data/store";
 import { eligibleGames, drawGame } from "./data/draw";
-import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml } from "./components";
+import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml, storeSectionHtml, storeCtaHtml } from "./components";
 import { ytEmbed } from "./emu";
 import { fireConfetti } from "./confetti";
 import { supabase } from "./supabase";
@@ -25,6 +26,7 @@ let games: Game[] = [];
 let rounds: Round[] = [];
 let averages = new Map<string, { avg: number; n: number }>();
 let suggestions: SuggestionWithAuthor[] = [];
+let storeItems: StoreItem[] = [];
 let candidate: Game | null = null;
 let busy = false;
 
@@ -37,16 +39,18 @@ const isMember = () => session?.role != null;
 
 async function loadState() {
   session = await currentSession();
-  const [g, r, avg, sug] = await Promise.all([
+  const [g, r, avg, sug, store] = await Promise.all([
     listGames(), // homepage: só jogos ativos, inclusive pro admin
     listRounds(),
     reviewAverages(),
     listSuggestions().catch(() => [] as SuggestionWithAuthor[]),
+    listStoreItems().catch(() => [] as StoreItem[]),
   ]);
   games = g;
   rounds = r;
   averages = avg;
   suggestions = sug;
+  storeItems = store;
 }
 
 // ======================================================================
@@ -58,6 +62,7 @@ async function render() {
   const params = new URLSearchParams(query || "");
   if (route === "entrar") return app.replaceChildren(loginView(params.get("code")));
   if (route === "perfil") return app.replaceChildren(profileView());
+  if (route === "loja") return app.replaceChildren(lojaView());
   if (route === "admin") {
     if (!isAdmin()) {
       location.hash = "#/";
@@ -147,6 +152,9 @@ function renderStage(stage: HTMLElement) {
 
   // --- indique seu jogo ---
   parts.push(suggestionsSectionHtml());
+
+  // --- loja (botão piscante → #/loja) ---
+  parts.push(storeCtaHtml(storeItems));
 
   parts.push(`<footer><p class="rules">${games.filter((g) => g.active).length} clássicos na curadoria · ${playedIds().size} já jogados</p></footer>`);
 
@@ -606,6 +614,21 @@ function loginView(inviteCode?: string | null): HTMLElement {
   return el;
 }
 
+function lojaView(): HTMLElement {
+  const el = document.createElement("div");
+  el.appendChild(topbar());
+  el.insertAdjacentHTML(
+    "beforeend",
+    `<header>
+      <div class="kicker">GAME CLUB RETRÔ</div>
+      <h1>Jogue de verdade</h1>
+    </header>
+    <div style="margin-top:26px">${storeSectionHtml(storeItems)}</div>
+    <p style="text-align:center;margin-top:28px"><a href="#/">&lt;&lt; voltar pro sorteador</a></p>`,
+  );
+  return el;
+}
+
 function profileView(): HTMLElement {
   const el = document.createElement("div");
   el.appendChild(topbar());
@@ -670,6 +693,7 @@ function subscribeRealtime() {
     .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => refresh())
     .on("postgres_changes", { event: "*", schema: "public", table: "games" }, () => refresh())
     .on("postgres_changes", { event: "*", schema: "public", table: "suggestions" }, () => refresh())
+    .on("postgres_changes", { event: "*", schema: "public", table: "store_items" }, () => refresh())
     .subscribe();
 }
 

@@ -69,6 +69,34 @@ await scenario("anon", null, async (tx) => {
   }
 });
 
+// store_items: leitura pública, escrita só admin
+await scenario("postgres", null, async (tx) => {
+  await tx`insert into public.store_items (title, url) values ('SNES', 'https://shopee.com.br/x')`;
+  await tx.unsafe(`set local role anon`);
+  const r = await tx`select count(*)::int n from public.store_items`;
+  check("anon lê store_items", r[0].n >= 1);
+});
+await scenario("anon", null, async (tx) => {
+  try {
+    await tx`insert into public.store_items (title, url) values ('h', 'https://x.com')`;
+    check("anon NÃO insere store_items", false);
+  } catch (e) {
+    check("anon NÃO insere store_items", denied(e));
+  }
+});
+await scenario("authenticated", MEMBER_UID, async (tx) => {
+  try {
+    await tx`insert into public.store_items (title, url) values ('h', 'https://x.com')`;
+    check("membro NÃO insere store_items", false);
+  } catch (e) {
+    check("membro NÃO insere store_items", denied(e));
+  }
+});
+await scenario("authenticated", ADMIN_UID, async (tx) => {
+  const [s] = await tx`insert into public.store_items (title, url) values ('N64', 'https://shopee.com.br/z') returning id`;
+  check("admin insere store_items", !!s.id);
+});
+
 // membro não escreve games/rounds
 await scenario("authenticated", MEMBER_UID, async (tx) => {
   await tx`update public.games set featured = true where id = 'ff7'`;

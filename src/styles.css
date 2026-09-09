@@ -281,6 +281,28 @@ h2.section { font-family: var(--pixel); font-size: 13px; color: var(--text); mar
 .review-item .body { margin-top: 6px; color: var(--muted); font-size: 14px; }
 .club-avg { font-family: var(--pixel); font-size: 11px; color: var(--amber); }
 
+/* ---------- Loja (consoles à venda) ---------- */
+.store-cta { margin-top: 28px; text-align: center; }
+.store-cta-btn {
+  display: inline-block; white-space: nowrap; font-family: var(--pixel); font-size: 11px; letter-spacing: 1px;
+  color: var(--amber); text-decoration: none;
+  padding: 14px 22px; border: 1px solid rgba(255,197,61,0.45); border-radius: 12px;
+  background: rgba(255,197,61,0.06); animation: blink 1.6s steps(1) infinite;
+  transition: background 0.2s ease, transform 0.12s ease;
+}
+.store-cta-btn:hover { background: rgba(255,197,61,0.14); transform: translateY(-2px); animation: none; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-top: 16px; }
+.store-card { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; overflow: hidden;
+  display: flex; flex-direction: column; transition: transform 0.18s ease, border-color 0.2s ease; }
+.store-card:hover { transform: translateY(-3px); border-color: rgba(53,224,240,0.45); }
+.store-card img { display: block; width: 100%; height: 150px; object-fit: cover; background: var(--panel); }
+.store-card .ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; height: 150px; background: radial-gradient(120% 80% at 50% 0%, rgba(53,224,240,0.07), transparent 70%); }
+.store-card .s-name { padding: 10px 12px 2px; font-size: 13px; line-height: 1.35; }
+.store-card .s-price { padding: 4px 12px 0; font-family: var(--pixel); font-size: 11px; color: var(--amber); }
+.store-card .s-meta { padding: 4px 12px 0; font-size: 11px; color: var(--muted); }
+.store-card .link-btn { margin: 12px; justify-content: center; }
+.store-card > .link-btn:first-of-type { margin-top: auto; }
+
 /* ---------- Admin ---------- */
 .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
 .admin-tabs button { font-family: var(--pixel); font-size: 10px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
@@ -313,5 +335,6 @@ footer .rules { opacity: 0.75; }
 @media (prefers-reduced-motion: reduce) {
   .bg-glow, .idle-line, .result, .modal-backdrop, .modal, .standby-dot { animation: none; }
   .link-btn:hover, .roll-btn:hover, .commit-btn:hover, .trailer .play-poster:hover::after,
-  .cover:hover, .trailer:hover, .badge:hover, .catalog-list li:hover { transform: none; }
+  .cover:hover, .trailer:hover, .badge:hover, .catalog-list li:hover, .store-card:hover { transform: none; }
+  .store-cta-btn { animation: none; }
 }

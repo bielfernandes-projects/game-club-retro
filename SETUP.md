@@ -19,6 +19,20 @@ Já configurado por API:
 - ✅ `RAWG_API_KEY` no Vercel (production + preview + development).
 - ✅ Env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` no Vercel.
 
+### Loja (Shopee Affiliate)
+
+- Migration `supabase/migrations/0004_store.sql` (tabela `store_items` + os 7 itens fixos).
+  Aplicar: `node --env-file=.env.local scripts/sql.mjs supabase/migrations/0004_store.sql`.
+- **Falta você:** adicionar no Vercel (todos os ambientes) as env vars **server-only**:
+  - `SHOPEE_APP_ID` e `SHOPEE_APP_SECRET` (painel de Afiliados da Shopee) — já estão no
+    `.env.local`. **Foram coladas no chat — dá pra rotacionar depois.**
+  - `CRON_SECRET` (qualquer string aleatória) — o Vercel manda no header do cron; `api/store-refresh`
+    recusa quem não tiver. Sem ela o endpoint fica aberto (baixo risco, mas melhor pôr).
+  - `SUPABASE_SERVICE_ROLE_KEY` e `SUPABASE_URL` (o cron escreve no banco fora do RLS) — conferir
+    que existem no Vercel.
+- O cron roda **09:00 UTC** (06:00 BRT) todo dia — ver `vercel.json`. Pra rodar na mão:
+  `node --env-file=.env.local scripts/store-refresh.mjs`.
+
 ## Falta
 
 1. **Você:** deletar os projetos Supabase que não são o `wikbubnxkxazzsikhelo`

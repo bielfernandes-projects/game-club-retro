@@ -58,6 +58,27 @@ export interface Suggestion {
   decided_at: string | null;
 }
 
+/** Um item da seção "Loja" — o cron diário busca a oferta de maior comissão pra cada `keyword`. */
+export interface StoreItem {
+  id: string;
+  label: string; // nome que aparece no card
+  keyword: string | null; // termo de busca do cron; null = item avulso
+  url: string | null; // link curto de afiliado (rastreável); null = ainda não preenchido
+  title: string | null; // nome cru do produto na Shopee
+  image_url: string | null;
+  price: string | null; // texto livre: "R$ 349,90"
+  rating: number | null; // 0–5
+  sales: number | null;
+  commission: number | null; // % de comissão da oferta escolhida
+  item_id: number | null; // ref do produto Shopee (p/ re-buscar)
+  shop_id: number | null;
+  sort_order: number;
+  active: boolean;
+  refreshed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Sessão do usuário resolvida (auth + papel). */
 export interface Session {
   userId: string;

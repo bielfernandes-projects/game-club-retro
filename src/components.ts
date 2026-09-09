@@ -1,4 +1,4 @@
-import type { Game, Round } from "./types";
+import type { Game, Round, StoreItem } from "./types";
 import { EMU, consoleShort, romSearchUrl, ytPoster, ytWatch } from "./emu";
 import { blockingPredecessor } from "./data/draw";
 
@@ -95,6 +95,51 @@ export function catalogHtml(
     <summary><span>LISTA COMPLETA — ${rows.length} JOGOS · ${done} JOGADOS</span></summary>
     <ul class="catalog-list">${items}</ul>
   </details>`;
+}
+
+/** "2300" → "2,3 mil", "15000" → "15 mil", "1200000" → "1,2 mi". */
+export function compactPtBr(n: number): string {
+  if (n < 1000) return String(n);
+  const scale = n < 950_000 ? { d: 1000, s: " mil" } : { d: 1_000_000, s: " mi" };
+  const v = n / scale.d;
+  return (v < 10 ? v.toFixed(1).replace(".", ",") : String(Math.round(v))) + scale.s;
+}
+
+/** Botãozinho piscante na home que leva pra página da Loja. Sem itens prontos → nada. */
+export function storeCtaHtml(items: StoreItem[]): string {
+  if (!items.some((it) => it.url)) return "";
+  return `<div class="store-cta">
+    <a class="store-cta-btn" href="#/loja">Veja a Oferta</a>
+  </div>`;
+}
+
+/** Página da Loja: grid de consoles/acessórios à venda. */
+export function storeSectionHtml(items: StoreItem[]): string {
+  const ready = items.filter((it) => it.url);
+  if (ready.length === 0) {
+    return `<p class="notice" style="margin-top:20px">Ainda estamos garimpando os melhores preços. Volta daqui a pouco.</p>`;
+  }
+  const cards = ready
+    .map((it) => {
+      const media = it.image_url
+        ? `<img src="${esc(it.image_url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : `<span class="ph"><span class="ph-glyph">?</span><span class="ph-sub">sem foto</span></span>`;
+      const price = it.price ? `<div class="s-price">${esc(it.price)}</div>` : "";
+      const bits: string[] = [];
+      if (it.rating != null) bits.push(`${Number(it.rating).toFixed(1).replace(".", ",")}★`);
+      if (it.sales != null) bits.push(`${compactPtBr(it.sales)} vendidos`);
+      const meta = bits.length ? `<div class="s-meta">${esc(bits.join(" · "))}</div>` : "";
+      return `<div class="store-card">
+        ${media}
+        <div class="s-name">${esc(it.label)}</div>
+        ${price}
+        ${meta}
+        <a class="link-btn" href="${esc(it.url!)}" target="_blank" rel="noopener">Ver na Shopee ↗</a>
+      </div>`;
+    })
+    .join("");
+  return `<p class="sub" style="margin:0 auto;max-width:52ch">Uns consoles baratos que rodam esses clássicos numa boa. São links de afiliado: o clube ganha uns trocados se você comprar por aqui, e um robô atualiza os preços todo dia.</p>
+    <div class="store-grid">${cards}</div>`;
 }
 
 export function monthGameHtml(g: Game, round: Round): string {
