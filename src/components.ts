@@ -116,7 +116,7 @@ export function compactPtBr(n: number): string {
 export function storeCtaHtml(items: StoreItem[]): string {
   if (!items.some((it) => it.url)) return "";
   return `<div class="store-cta">
-    <a class="store-cta-btn" href="#/loja">Cansou do PC ou celular? Jogue de verdade!</a>
+    <a class="store-cta-btn" href="#/loja">Cansou do pc ou celular? Jogue de verdade!</a>
   </div>`;
 }
 

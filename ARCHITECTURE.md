@@ -57,8 +57,10 @@ Roda no navegador do admin (ver ADR 0002). A RLS garante só *quem* cria Rodada.
 ## Fluxo da interface (`src/main.ts`)
 
 Router por hash: `#/` (home), `#/loja`, `#/admin`, `#/entrar`, `#/perfil`. Um `refresh()` recarrega
-`session + games + rounds + médias` e re-renderiza; disparado por `hashchange`, mudança de
-auth, e **Realtime** (qualquer INSERT/UPDATE em `rounds`/`reviews`/`games`).
+`session + games + rounds + médias + loja` e re-renderiza; disparado por `hashchange`, mudança
+de auth (só quando o usuário **muda** — não a cada foco de aba) e **Realtime** (INSERT/UPDATE
+em `rounds`/`reviews`/`games`/`suggestions`/`store_items`). No `#/admin` o Realtime só
+recarrega os dados em silêncio, sem redesenhar (o admin está editando).
 
 Home:
 - **admin, sem rodada ativa:** área de sorteio (animação slot → candidato → "confirmar como
@@ -66,11 +68,19 @@ Home:
 - **admin, com rodada:** card do jogo do mês + botões `encerrar o mês` / `arquivar`.
 - **membro / deslogado:** card do jogo do mês (só leitura) ou "ainda não tem jogo do mês".
 - **rodada `avaliando`:** formulário de avaliação (se membro) + lista de reviews + média.
-- **catálogo** (accordion) sempre, com ✓ jogado / 🔒 travado / ★ destaque / nota de crítica /
-  média do clube. Clicar (ou Enter) numa linha abre o **pop-up de ficha** do jogo —
+- **catálogo** (accordion) sempre, ordenado A→Z, com **busca por nome** (`.cat-search`,
+  `searchNorm` = minúsculo + sem acento) e marcas ✓ jogado / 🔒 travado / ★ destaque / nota de
+  crítica / média do clube. Clicar (ou Enter) numa linha abre o **pop-up de ficha** do jogo —
   `openModal(g, { hideCover, body, cta })`, o mesmo componente do modal de sorteio, com a
   mídia completa (`gameMediaHtml`) no corpo. Com o modal aberto, `html`/`body` ganham
   `.modal-open` (`overflow: hidden`) e o fundo não rola.
+
+## Painel admin (`src/admin.ts`)
+
+Quatro abas (`Jogos`, `Sugestões`, `Loja`, `Membros`). O `onChange` do admin redesenha **só o
+painel** (não o `#app`) e restaura a rolagem; edição inline de campo/checkbox grava no banco
+**em silêncio**, sem redesenhar. Na aba **Jogos**: busca por nome, e o cabeçalho da tabela é
+clicável pra ordenar por qualquer coluna (`jSort` persiste entre re-renders; ▲/▼ no header).
 
 ## `api/enrich.ts`
 

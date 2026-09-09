@@ -16,6 +16,44 @@ const CONSOLES: ConsoleCode[] = ["SNES", "MD", "N64", "PS1", "GBA", "GBC"];
 let tab: "jogos" | "membros" | "sugestoes" | "loja" = "jogos";
 let prefillTitle = "";
 
+// ordenação da tabela de jogos — persiste entre re-renders
+type JField = keyof Pick<
+  Game,
+  "active" | "featured" | "title" | "console" | "year" | "youtube_id" | "series" | "series_order" | "wiki_title" | "critic_score" | "cover_url"
+>;
+let jSort: { field: JField; dir: 1 | -1 } = { field: "title", dir: 1 };
+
+const JCOLS: { label: string; field?: JField }[] = [
+  { label: "ativo", field: "active" },
+  { label: "★", field: "featured" },
+  { label: "título", field: "title" },
+  { label: "cons.", field: "console" },
+  { label: "ano", field: "year" },
+  { label: "youtube_id", field: "youtube_id" },
+  { label: "saga", field: "series" },
+  { label: "nº", field: "series_order" },
+  { label: "wiki_title", field: "wiki_title" },
+  { label: "crítica", field: "critic_score" },
+  { label: "capa", field: "cover_url" },
+  { label: "" },
+];
+
+function jCompare(a: Game, b: Game): number {
+  const { field, dir } = jSort;
+  let av: unknown = a[field];
+  let bv: unknown = b[field];
+  if (typeof av === "boolean") av = av ? 1 : 0;
+  if (typeof bv === "boolean") bv = bv ? 1 : 0;
+  if (av == null && bv == null) return 0;
+  if (av == null) return 1; // vazios sempre no fim
+  if (bv == null) return -1;
+  const c =
+    typeof av === "number" && typeof bv === "number"
+      ? av - bv
+      : String(av).localeCompare(String(bv), "pt-BR");
+  return c !== 0 ? c * dir : a.title.localeCompare(b.title, "pt-BR");
+}
+
 export async function renderAdmin(root: HTMLElement, onChange: () => void) {
   root.innerHTML = `
     <h1>Modo admin</h1>
@@ -41,18 +79,16 @@ export async function renderAdmin(root: HTMLElement, onChange: () => void) {
 
 // ---------------------------------------------------------------- jogos
 async function renderJogos(body: HTMLElement, onChange: () => void) {
-  const games = (await listGames({ includeInactive: true })).sort((a, b) =>
-    a.title.localeCompare(b.title, "pt-BR"),
-  );
+  const games = await listGames({ includeInactive: true });
+  const th = ({ label, field }: (typeof JCOLS)[number]) =>
+    field
+      ? `<th data-sort="${field}" class="sortable${jSort.field === field ? " on" : ""}">${label} <span class="sort-ind">${jSort.field === field ? (jSort.dir === 1 ? "▲" : "▼") : "↕"}</span></th>`
+      : `<th></th>`;
   body.innerHTML = `
-    <p class="sub" style="margin:0 0 10px">${games.length} jogos. Editar um campo salva ao sair dele. ★ = Destaque (peso 3× no sorteio).</p>
+    <p class="sub" style="margin:0 0 10px">${games.length} jogos. Editar um campo salva ao sair dele. Clique no cabeçalho pra ordenar. ★ = Destaque (peso 3× no sorteio).</p>
     <input type="search" id="j-search" placeholder="buscar jogo…" style="width:100%;margin-bottom:10px">
     <div class="table-scroll"><table class="table">
-      <thead><tr>
-        <th>ativo</th><th>★</th><th>título</th><th>cons.</th><th>ano</th>
-        <th>youtube_id</th><th>saga</th><th>nº</th><th>wiki_title</th>
-        <th>crítica</th><th>capa</th><th></th>
-      </tr></thead>
+      <thead><tr>${JCOLS.map(th).join("")}</tr></thead>
       <tbody id="rows"></tbody>
     </table></div>
     <h2 class="section">Novo jogo</h2>
@@ -72,7 +108,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
 
   prefillTitle = "";
   const tbody = body.querySelector("#rows") as HTMLElement;
-  tbody.innerHTML = games.map(rowHtml).join("");
+  let query = "";
 
   const showErr = (msg: string) => {
     const el = body.querySelector<HTMLElement>("#admin-err")!;
@@ -90,51 +126,78 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
     }
   };
 
-  tbody.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
-    const id = tr.dataset.id!;
-    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) => {
-      const on = (e.target as HTMLInputElement).checked;
-      const g = games.find((x) => x.id === id);
-      if (g) g.active = on;
-      setGameActive(id, on).catch((ex) => showErr((ex as Error).message));
-    });
-    tr.querySelector<HTMLInputElement>(".c-featured")?.addEventListener("change", (e) => {
-      const on = (e.target as HTMLInputElement).checked;
-      const g = games.find((x) => x.id === id);
-      if (g) g.featured = on;
-      setGameFeatured(id, on).catch((ex) => showErr((ex as Error).message));
-    });
-    tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-field]").forEach((inp) => {
-      inp.addEventListener("blur", () => {
-        const f = inp.dataset.field as keyof Game;
-        let v: unknown = inp.value.trim();
-        if (f === "year" || f === "series_order" || f === "critic_score")
-          v = v === "" ? null : Number(v);
-        if (f === "series" && v === "") v = null;
-        if (f === "critic_score") save(id, { critic_score: v as number, critic_source: "manual" });
-        else save(id, { [f]: v } as Partial<Game>);
-      });
-    });
-    tr.querySelector(".c-del")?.addEventListener("click", async () => {
-      const g = games.find((x) => x.id === id)!;
-      if (!confirm(`Excluir "${g.title}" de vez? Não dá pra desfazer.`)) return;
-      try {
-        await deleteGame(id);
-        onChange();
-      } catch (e) {
-        showErr((e as Error).message);
-      }
-    });
-  });
-
-  body.querySelector<HTMLInputElement>("#j-search")?.addEventListener("input", (e) => {
-    const q = searchNorm((e.target as HTMLInputElement).value.trim());
+  const applyFilter = () => {
     tbody.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
       const name = searchNorm(
         tr.querySelector<HTMLInputElement>('[data-field="title"]')?.value ?? "",
       );
-      tr.hidden = !!q && !name.includes(q);
+      tr.hidden = !!query && !name.includes(query);
     });
+  };
+
+  const wireRows = () => {
+    tbody.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
+      const id = tr.dataset.id!;
+      tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) => {
+        const on = (e.target as HTMLInputElement).checked;
+        const g = games.find((x) => x.id === id);
+        if (g) g.active = on;
+        setGameActive(id, on).catch((ex) => showErr((ex as Error).message));
+      });
+      tr.querySelector<HTMLInputElement>(".c-featured")?.addEventListener("change", (e) => {
+        const on = (e.target as HTMLInputElement).checked;
+        const g = games.find((x) => x.id === id);
+        if (g) g.featured = on;
+        setGameFeatured(id, on).catch((ex) => showErr((ex as Error).message));
+      });
+      tr.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-field]").forEach((inp) => {
+        inp.addEventListener("blur", () => {
+          const f = inp.dataset.field as keyof Game;
+          let v: unknown = inp.value.trim();
+          if (f === "year" || f === "series_order" || f === "critic_score")
+            v = v === "" ? null : Number(v);
+          if (f === "series" && v === "") v = null;
+          if (f === "critic_score") save(id, { critic_score: v as number, critic_source: "manual" });
+          else save(id, { [f]: v } as Partial<Game>);
+        });
+      });
+      tr.querySelector(".c-del")?.addEventListener("click", async () => {
+        const g = games.find((x) => x.id === id)!;
+        if (!confirm(`Excluir "${g.title}" de vez? Não dá pra desfazer.`)) return;
+        try {
+          await deleteGame(id);
+          onChange();
+        } catch (e) {
+          showErr((e as Error).message);
+        }
+      });
+    });
+  };
+
+  const renderRows = () => {
+    tbody.innerHTML = [...games].sort(jCompare).map(rowHtml).join("");
+    wireRows();
+    applyFilter();
+    body.querySelectorAll<HTMLElement>("th[data-sort]").forEach((h) => {
+      const on = h.dataset.sort === jSort.field;
+      h.classList.toggle("on", on);
+      h.querySelector(".sort-ind")!.textContent = on ? (jSort.dir === 1 ? "▲" : "▼") : "↕";
+    });
+  };
+  renderRows();
+
+  body.querySelectorAll<HTMLElement>("th[data-sort]").forEach((h) => {
+    h.addEventListener("click", () => {
+      const f = h.dataset.sort as JField;
+      if (jSort.field === f) jSort.dir = jSort.dir === 1 ? -1 : 1;
+      else jSort = { field: f, dir: 1 };
+      renderRows();
+    });
+  });
+
+  body.querySelector<HTMLInputElement>("#j-search")?.addEventListener("input", (e) => {
+    query = searchNorm((e.target as HTMLInputElement).value.trim());
+    applyFilter();
   });
 
   body.querySelector("#add-game")?.addEventListener("click", async () => {

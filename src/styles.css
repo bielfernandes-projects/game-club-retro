@@ -312,6 +312,11 @@ h2.section { font-family: var(--pixel); font-size: 13px; color: var(--text); mar
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th, .table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .table th { font-family: var(--pixel); font-size: 9px; color: var(--muted); }
+.table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.table th.sortable:hover { color: var(--text); }
+.table th.sortable.on { color: var(--amber); }
+.table th .sort-ind { font-size: 8px; opacity: 0.6; }
+.table th.sortable.on .sort-ind { opacity: 1; }
 .table input, .table select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 6px 8px; font: inherit; }
 .table .num { width: 64px; }
 .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
