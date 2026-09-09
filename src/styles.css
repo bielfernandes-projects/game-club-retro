@@ -284,7 +284,7 @@ h2.section { font-family: var(--pixel); font-size: 13px; color: var(--text); mar
 /* ---------- Loja (consoles à venda) ---------- */
 .store-cta { margin-top: 28px; text-align: center; }
 .store-cta-btn {
-  display: inline-block; max-width: 30ch; font-family: var(--pixel); font-size: clamp(9px, 2.2vw, 11px); line-height: 1.7; letter-spacing: 1px;
+  display: inline-block; max-width: 40ch; font-family: var(--pixel); font-size: clamp(8px, 2vw, 10px); line-height: 1.8; letter-spacing: 1px;
   color: var(--amber); text-decoration: none;
   padding: 14px 22px; border: 1px solid rgba(255,197,61,0.45); border-radius: 12px;
   background: rgba(255,197,61,0.06); animation: blink 1.6s steps(1) infinite;
