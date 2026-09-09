@@ -23,8 +23,9 @@ export async function reviewAverages(): Promise<Map<string, { avg: number; n: nu
   const { data, error } = await supabase.from("reviews").select("rating, rounds(game_id)");
   if (error) throw error;
   const acc = new Map<string, { sum: number; n: number }>();
-  for (const r of (data ?? []) as { rating: number; rounds: { game_id: string } | null }[]) {
-    const gid = r.rounds?.game_id;
+  type Row = { rating: number; rounds: { game_id: string } | { game_id: string }[] | null };
+  for (const r of (data ?? []) as unknown as Row[]) {
+    const gid = Array.isArray(r.rounds) ? r.rounds[0]?.game_id : r.rounds?.game_id;
     if (!gid) continue;
     const cur = acc.get(gid) ?? { sum: 0, n: 0 };
     cur.sum += r.rating;
