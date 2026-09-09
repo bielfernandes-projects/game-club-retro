@@ -44,7 +44,18 @@ export async function updateDisplayName(userId: string, name: string) {
   if (error) throw error;
 }
 
-/** Chama `cb` sempre que o estado de auth muda (login/logout/refresh). */
+/**
+ * Chama `cb` só quando o usuário logado **muda de verdade** (login, logout, troca de conta).
+ * Ignora `TOKEN_REFRESHED` e o `SIGNED_IN` repetido que o supabase-js dispara toda vez que a
+ * aba volta ao foco — senão a página recarregaria sozinha a cada vez que você troca de aba.
+ */
 export function onAuthChange(cb: () => void) {
-  supabase.auth.onAuthStateChange(() => cb());
+  let known: string | null | undefined;
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
+    const uid = session?.user?.id ?? null;
+    if (known !== undefined && uid === known) return;
+    known = uid;
+    cb();
+  });
 }
