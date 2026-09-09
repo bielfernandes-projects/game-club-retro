@@ -103,7 +103,8 @@ Capa: `en.wikipedia.org/api/rest_v1/page/summary`. Crítica: `api.rawg.io/api/ga
 `CRON_SECRET`, abre o Supabase com a `service_role` e, pra cada `store_items` ativo com
 `keyword`, roda `bestOfferByKeyword` → atualiza `url`/`image_url`/`price`/`rating`/`sales`/
 `commission`/`item_id`/`shop_id` + `refreshed_at`. **Não-destrutivo:** keyword sem resultado
-no dia → linha intacta (mantém o link de ontem). `scripts/store-refresh.mjs` roda o mesmo na mão.
+no dia → linha intacta (mantém o link de ontem). Pra forçar: botão no `#/admin` → Loja, ou
+`curl -H "authorization: Bearer $CRON_SECRET" .../api/store-refresh`.
 
 ## Loja (consoles à venda)
 
