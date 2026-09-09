@@ -61,7 +61,7 @@ export function catalogHtml(
   archivedIds: Set<string>,
   clubAvg: Map<string, { avg: number; n: number }>,
 ): string {
-  const rows = [...games].sort((a, b) => a.year - b.year || a.title.localeCompare(b.title));
+  const rows = [...games].sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
   const done = playedIds.size;
   const items = rows
     .map((g) => {
@@ -93,8 +93,15 @@ export function catalogHtml(
     .join("");
   return `<details class="catalog">
     <summary><span>LISTA COMPLETA — ${rows.length} JOGOS · ${done} JOGADOS</span></summary>
+    <input type="search" class="cat-search" placeholder="buscar jogo…" aria-label="Buscar jogo">
     <ul class="catalog-list">${items}</ul>
+    <p class="cat-empty" hidden>Nenhum jogo com esse nome.</p>
   </details>`;
+}
+
+/** Normaliza pra busca: minúsculo, sem acento. */
+export function searchNorm(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 /** "2300" → "2,3 mil", "15000" → "15 mil", "1200000" → "1,2 mi". */

@@ -10,7 +10,7 @@ import { listSuggestions, setSuggestionStatus, deleteSuggestion } from "./data/s
 import {
   listStoreItems, upsertStoreItem, setStoreItemActive, deleteStoreItem,
 } from "./data/store";
-import { esc } from "./components";
+import { esc, searchNorm } from "./components";
 
 const CONSOLES: ConsoleCode[] = ["SNES", "MD", "N64", "PS1", "GBA", "GBC"];
 let tab: "jogos" | "membros" | "sugestoes" | "loja" = "jogos";
@@ -41,9 +41,12 @@ export async function renderAdmin(root: HTMLElement, onChange: () => void) {
 
 // ---------------------------------------------------------------- jogos
 async function renderJogos(body: HTMLElement, onChange: () => void) {
-  const games = await listGames({ includeInactive: true });
+  const games = (await listGames({ includeInactive: true })).sort((a, b) =>
+    a.title.localeCompare(b.title, "pt-BR"),
+  );
   body.innerHTML = `
     <p class="sub" style="margin:0 0 10px">${games.length} jogos. Editar um campo salva ao sair dele. ★ = Destaque (peso 3× no sorteio).</p>
+    <input type="search" id="j-search" placeholder="buscar jogo…" style="width:100%;margin-bottom:10px">
     <div class="table-scroll"><table class="table">
       <thead><tr>
         <th>ativo</th><th>★</th><th>título</th><th>cons.</th><th>ano</th>
@@ -121,6 +124,16 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
       } catch (e) {
         showErr((e as Error).message);
       }
+    });
+  });
+
+  body.querySelector<HTMLInputElement>("#j-search")?.addEventListener("input", (e) => {
+    const q = searchNorm((e.target as HTMLInputElement).value.trim());
+    tbody.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
+      const name = searchNorm(
+        tr.querySelector<HTMLInputElement>('[data-field="title"]')?.value ?? "",
+      );
+      tr.hidden = !!q && !name.includes(q);
     });
   });
 

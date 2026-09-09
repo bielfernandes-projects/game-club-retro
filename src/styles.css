@@ -229,6 +229,8 @@ h2.section { font-family: var(--pixel); font-size: 13px; color: var(--text); mar
 .catalog > summary::after { content: "▸"; color: var(--cyan); transition: transform 0.2s ease; }
 .catalog[open] > summary::after { transform: rotate(90deg); }
 .catalog > summary:hover { color: var(--text); }
+.cat-search { display: block; width: calc(100% - 32px); margin: 0 16px 10px; font-size: 13px; padding: 8px 12px; }
+.cat-empty { padding: 14px 16px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
 .catalog-list { list-style: none; border-top: 1px solid var(--line); max-height: 460px; overflow-y: auto; }
 .catalog-list li { display: flex; align-items: baseline; gap: 10px; padding: 9px 16px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.15s ease, padding-left 0.15s ease; }
 .catalog-list li:last-child { border-bottom: 0; }

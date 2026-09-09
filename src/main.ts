@@ -10,7 +10,7 @@ import {
 } from "./data/suggestions";
 import { listStoreItems } from "./data/store";
 import { eligibleGames, drawGame } from "./data/draw";
-import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml, storeSectionHtml, storeCtaHtml } from "./components";
+import { esc, badgesHtml, gameMediaHtml, catalogHtml, monthGameHtml, starsHtml, storeSectionHtml, storeCtaHtml, searchNorm } from "./components";
 import { ytEmbed } from "./emu";
 import { fireConfetti } from "./confetti";
 import { supabase } from "./supabase";
@@ -175,6 +175,26 @@ function renderStage(stage: HTMLElement) {
     void renderReviewBox(round, stage);
   }
   wireSuggestions(stage);
+  wireCatalogSearch(stage);
+}
+
+/** Filtro por nome no catálogo da home. */
+function wireCatalogSearch(stage: HTMLElement) {
+  const input = stage.querySelector<HTMLInputElement>(".cat-search");
+  const list = stage.querySelector<HTMLElement>(".catalog-list");
+  const empty = stage.querySelector<HTMLElement>(".cat-empty");
+  if (!input || !list) return;
+  input.addEventListener("input", () => {
+    const q = searchNorm(input.value.trim());
+    let shown = 0;
+    list.querySelectorAll<HTMLElement>("li").forEach((li) => {
+      const name = searchNorm(li.querySelector(".cat-name")?.textContent ?? "");
+      const hit = !q || name.includes(q);
+      li.hidden = !hit;
+      if (hit) shown++;
+    });
+    if (empty) empty.hidden = shown > 0;
+  });
 }
 
 const SUG_STATUS: Record<string, string> = {
