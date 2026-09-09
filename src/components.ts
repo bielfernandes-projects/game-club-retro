@@ -138,7 +138,7 @@ export function storeSectionHtml(items: StoreItem[]): string {
       </div>`;
     })
     .join("");
-  return `<p class="sub" style="margin:0 auto;max-width:52ch">Uns consoles baratos que rodam esses clássicos numa boa. São links de afiliado: o clube ganha uns trocados se você comprar por aqui, e um robô atualiza os preços todo dia.</p>
+  return `<p class="sub" style="margin:0 auto;max-width:56ch">Uma listinha de consoles baratos que rodam esses clássicos numa boa, mais alguns gadgets que vão te auxiliar na jornada gamer.</p>
     <div class="store-grid">${cards}</div>`;
 }
 
