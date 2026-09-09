@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({ error: "SHOPEE_APP_ID/SECRET não configurados" });
     return;
   }
-  const url = process.env.SUPABASE_URL;
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
     res.status(500).json({ error: "SUPABASE_URL/SERVICE_ROLE_KEY não configurados" });
