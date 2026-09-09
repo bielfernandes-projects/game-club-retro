@@ -62,7 +62,10 @@ Home:
 - **membro / deslogado:** card do jogo do mês (só leitura) ou "ainda não tem jogo do mês".
 - **rodada `avaliando`:** formulário de avaliação (se membro) + lista de reviews + média.
 - **catálogo** (accordion) sempre, com ✓ jogado / 🔒 travado / ★ destaque / nota de crítica /
-  média do clube.
+  média do clube. Clicar (ou Enter) numa linha abre o **pop-up de ficha** do jogo —
+  `openModal(g, { hideCover, body, cta })`, o mesmo componente do modal de sorteio, com a
+  mídia completa (`gameMediaHtml`) no corpo. Com o modal aberto, `html`/`body` ganham
+  `.modal-open` (`overflow: hidden`) e o fundo não rola.
 
 ## `api/enrich.ts`
 

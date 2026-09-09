@@ -28,6 +28,9 @@ admin sorteia → confirma → Rodada "jogando"  (todo mundo joga)
 Sagas jogam na ordem: *Suikoden II* só entra no sorteio depois que *Suikoden I* for arquivado.
 Jogos em **Destaque** (★, definido pelo admin) contam **3×** no sorteio.
 
+Clicar em qualquer jogo da lista completa abre a **ficha** dele (capa, trailer, links de
+emulador/ROM e a média do clube, se já foi jogado) — o mesmo pop-up do sorteio.
+
 ## Rodar local
 
 ```bash
