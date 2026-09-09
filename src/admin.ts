@@ -304,17 +304,29 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
     err.hidden = false;
   };
 
+  // redesenha só o painel da Loja, mantendo a rolagem — sem chamar onChange (que recarrega
+  // a página toda e joga o admin lá pra cima).
+  const rerender = async () => {
+    const y = window.scrollY;
+    await renderLoja(body, onChange);
+    window.scrollTo(0, y);
+  };
+
+  // edição inline: salva no banco em silêncio, não mexe na tela (o valor já está no input).
   const save = async (id: string, patch: Partial<StoreItem>) => {
     const it = items.find((x) => x.id === id)!;
-    await upsertStoreItem({ ...it, ...patch });
-    onChange();
+    Object.assign(it, patch);
+    await upsertStoreItem({ ...it });
   };
 
   body.querySelectorAll<HTMLElement>("tr[data-id]").forEach((tr) => {
     const id = tr.dataset.id!;
-    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) =>
-      setStoreItemActive(id, (e.target as HTMLInputElement).checked).then(onChange),
-    );
+    tr.querySelector<HTMLInputElement>(".c-active")?.addEventListener("change", (e) => {
+      const on = (e.target as HTMLInputElement).checked;
+      const it = items.find((x) => x.id === id);
+      if (it) it.active = on;
+      setStoreItemActive(id, on).catch((ex) => showErr((ex as Error).message));
+    });
     tr.querySelectorAll<HTMLInputElement>("[data-field]").forEach((inp) => {
       inp.addEventListener("blur", () => {
         const f = inp.dataset.field as keyof StoreItem;
@@ -354,8 +366,7 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
         } else {
           showErr(`"${it.label}": nada encontrado agora (mantive o que tinha).`);
         }
-        renderLoja(body, onChange);
-        onChange();
+        await rerender();
       } catch (ex) {
         showErr((ex as Error).message);
         btn.disabled = false;
@@ -366,8 +377,7 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       if (!confirm("Excluir esse item da loja?")) return;
       try {
         await deleteStoreItem(id);
-        renderLoja(body, onChange);
-        onChange();
+        await rerender();
       } catch (ex) {
         showErr((ex as Error).message);
       }
@@ -392,8 +402,7 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       }
     }
     if (miss) showErr(`${miss} item(ns) sem resultado agora — os antigos foram mantidos.`);
-    renderLoja(body, onChange);
-    onChange();
+    await rerender();
   });
 
   body.querySelector("#s-add")?.addEventListener("click", async () => {
@@ -435,8 +444,7 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
         ...base,
         ...man,
       });
-      renderLoja(body, onChange);
-      onChange();
+      await rerender();
     } catch (ex) {
       showErr((ex as Error).message);
       btn.disabled = false;

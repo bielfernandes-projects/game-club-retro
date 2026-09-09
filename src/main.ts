@@ -686,14 +686,21 @@ async function refresh() {
   }
 }
 
+/** No painel admin, o Realtime só recarrega os dados em silêncio — não redesenha a tela
+ * (o admin está editando; quem redesenha o painel são as ações dele). Fora do admin, refresh normal. */
+function liveRefresh() {
+  if (location.hash.startsWith("#/admin")) void loadState();
+  else void refresh();
+}
+
 function subscribeRealtime() {
   supabase
     .channel("club")
-    .on("postgres_changes", { event: "*", schema: "public", table: "rounds" }, () => refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "games" }, () => refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "suggestions" }, () => refresh())
-    .on("postgres_changes", { event: "*", schema: "public", table: "store_items" }, () => refresh())
+    .on("postgres_changes", { event: "*", schema: "public", table: "rounds" }, liveRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, liveRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "games" }, liveRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "suggestions" }, liveRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "store_items" }, liveRefresh)
     .subscribe();
 }
 
