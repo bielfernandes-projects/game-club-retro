@@ -55,7 +55,12 @@ async function gql(query: string, signal?: AbortSignal): Promise<Json | null> {
 }
 
 const NODE_FIELDS =
-  "itemId shopId productName imageUrl priceMin priceMax price offerLink productLink ratingStar sales commissionRate";
+  "itemId shopId shopName productName imageUrl priceMin priceMax price offerLink productLink ratingStar sales commissionRate";
+
+/** Vendedor cross-border/internacional da Shopee: o handle termina em ".br" (gerado automático). */
+function isCrossBorder(node: Json): boolean {
+  return /\.br\.?$/i.test(String(node.shopName ?? "").trim());
+}
 
 function num(v: unknown): number | null {
   const x = Number(v);
@@ -138,9 +143,9 @@ const ACCESSORY = [
 ];
 
 /**
- * Só ofertas que casam com o termo (código de modelo + ≥60% das palavras; descarta acessório
- * quando o termo pede console). Pega a mais relevante — melhor média de vendas × comissão que
- * "só a maior comissão". Nada casa → null.
+ * Só ofertas BR (descarta vendedor cross-border) que casam com o termo (código de modelo +
+ * ≥60% das palavras; descarta acessório quando o termo pede console). Pega a mais relevante.
+ * Nada casa → null.
  */
 function pickForKeyword(nodes: Json[], keyword: string): Json | null {
   const tokens = norm(keyword).split(" ").filter((t) => t.length >= 2 && !STOP.has(t));
@@ -151,6 +156,7 @@ function pickForKeyword(nodes: Json[], keyword: string): Json | null {
   const banned = tokens.some((t) => ACCESSORY.includes(t)) ? [] : ACCESSORY;
   return (
     nodes.find((n) => {
+      if (isCrossBorder(n)) return false;
       const name = norm(String(n.productName ?? ""));
       if (!models.every((m) => name.includes(m))) return false;
       if (banned.some((w) => name.includes(w))) return false;

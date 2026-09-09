@@ -109,7 +109,7 @@ export function compactPtBr(n: number): string {
 export function storeCtaHtml(items: StoreItem[]): string {
   if (!items.some((it) => it.url)) return "";
   return `<div class="store-cta">
-    <a class="store-cta-btn" href="#/loja">Veja a Oferta</a>
+    <a class="store-cta-btn" href="#/loja">Cansou do PC ou celular? Jogue de verdade!</a>
   </div>`;
 }
 
@@ -134,7 +134,7 @@ export function storeSectionHtml(items: StoreItem[]): string {
         <div class="s-name">${esc(it.label)}</div>
         ${price}
         ${meta}
-        <a class="link-btn" href="${esc(it.url!)}" target="_blank" rel="noopener">Ver na Shopee ↗</a>
+        <a class="link-btn" href="${esc(it.url!)}" target="_blank" rel="noopener">Veja a Oferta ↗</a>
       </div>`;
     })
     .join("");
