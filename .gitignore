@@ -1,4 +1,17 @@
-.vercel
 node_modules
+dist
 .DS_Store
 *.log
+
+# Vercel
+.vercel
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# tooling
+.agents
+.claude
+skills-lock.json
