@@ -1,57 +1,61 @@
-# Game Club Retrô — Sorteador do Mês
+# Game Club Retrô
 
-Site de página única que sorteia **um clássico incontestável (modo história) por mês** para o
-grupo Game Club Retrô jogar, zerar e discutir. Ao sortear, mostra a capa, o trailer e os links
-pra baixar o emulador do console e a ROM (busca priorizando PT-BR).
+App do clube: sorteia **um clássico incontestável (modo história) por mês**, com capa,
+trailer e links de emulador/ROM; e depois cada membro **avalia** o jogo.
 
 **No ar:** https://gameclub.bf.dev.br
 
-## Como funciona
+## Papéis
 
-- **Sortear jogo** → animação de slot machine → cai num *candidato* (nada é salvo ainda).
-- **Escolhemos esse** → salva na lista do clube, abre um modal de comemoração com confete e
-  libera o próximo jogo da saga (se houver). Dá pra **desfazer** — isso reativa o botão de escolher.
-- **Sortear outro** → descarta o candidato e tira outro.
-- A lista "Já jogamos" fica salva no navegador (`localStorage`); cada item tem ✕ pra desfazer,
-  e há um "limpar tudo".
-- O accordion **"Lista completa"** (fechado por padrão) mostra todos os jogos do sorteador,
-  marcando os já jogados e os que estão travados esperando o anterior da saga.
+| Quem | Pode |
+|---|---|
+| visitante (deslogado) | ver o catálogo, o jogo do mês e as avaliações |
+| **membro** (na allowlist) | tudo acima + **avaliar** (nota 1–5 + crítica) quando o mês fecha |
+| **admin** | sortear, controlar as rodadas, CRUD dos jogos, gerenciar a allowlist |
 
-### Regras da curadoria
+Login é por **magic link** — só e-mails que o admin cadastrou.
 
-- Só clássico **incontestável** com **campanha / modo história**.
-- **Fora:** jogos de luta, kart, plataforma e Super Mario (ou similares).
-- **Teto de console:** PlayStation 1. Também entram SNES, Mega Drive/Genesis, Nintendo 64,
-  Game Boy Color e Game Boy Advance — todos mais leves de emular. **PSP não entra.**
-- **Ordem das sagas:** um jogo numerado só entra no sorteio depois que o anterior for escolhido
-  (ex.: Suikoden I antes do II; Resident Evil 1 → 2 → 3).
+## Ciclo mensal
 
-## Rodar localmente
-
-Abra `index.html` no navegador. Para capas e embeds de vídeo funcionarem 100%, sirva por HTTP:
-
-```bash
-npx serve .
-# ou
-python -m http.server
+```
+admin sorteia → confirma → Rodada "jogando"  (todo mundo joga)
+  → admin "encerra o mês" → "avaliando"       (membros dão nota + crítica)
+  → admin "arquiva"        → "arquivada"       (libera o próximo sorteio)
 ```
 
-Abrir direto como `file://` funciona, mas o navegador bloqueia as capas (CORS) e o YouTube
-recusa o embed (erro 150/153) — por isso o site usa pôster clicável + link direto como plano B.
+Sagas jogam na ordem: *Suikoden II* só entra no sorteio depois que *Suikoden I* for arquivado.
+Jogos em **Destaque** (★, definido pelo admin) contam **3×** no sorteio.
+
+## Rodar local
+
+```bash
+npm install
+vercel env pull            # traz VITE_SUPABASE_* pra .env.local
+npm run dev                # http://localhost:5173
+npm test                   # testes de draw.ts
+```
 
 ## Deploy
 
-Estático no Vercel, sem build. Todo push na branch `main` publica automaticamente.
+Push na `main` → Vercel publica em `gameclub.bf.dev.br`. Push em qualquer branch → preview.
+O schema/seed do Supabase vive em `supabase/` (aplicado com `scripts/sql.mjs`).
 
-## Editar a lista de jogos
-
-Toda a curadoria vive no array `GAMES` dentro de `index.html`. Veja
-[ARCHITECTURE.md](ARCHITECTURE.md) para o schema de cada entrada e como as travas de saga funcionam.
+Config inicial dos serviços externos (Supabase Auth, Resend, RAWG): ver **[SETUP.md](SETUP.md)**.
 
 ## Estrutura
 
 ```
-index.html        # o site inteiro: markup + CSS + JS + dados dos jogos
-README.md
-ARCHITECTURE.md   # decisões técnicas, modelo de dados, algoritmo de elegibilidade
+src/
+  main.ts        bootstrap + router + view "home" (sorteador / jogo do mês / avaliações)
+  admin.ts       painel admin (CRUD de jogos + allowlist)
+  components.ts  builders de HTML puros (catálogo, mídia, badges, estrelas)
+  data/          games · rounds · reviews · members · draw (lógica pura + testes)
+  auth.ts        magic link, sessão, papel
+  supabase.ts    cliente
+api/enrich.ts    função serverless: capa (Wikipédia) + nota Metacritic (RAWG)
+supabase/
+  migrations/    schema + RLS + hooks + realtime
+  seed.sql       49 jogos + admin  (gerado por scripts/gen-seed.mjs)
 ```
+
+Detalhes técnicos: **[ARCHITECTURE.md](ARCHITECTURE.md)** · Vocabulário: **[CONTEXT.md](CONTEXT.md)**
