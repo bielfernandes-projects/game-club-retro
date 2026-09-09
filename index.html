@@ -139,21 +139,22 @@
 
   /* media */
   .media {
-    margin: 22px auto 0; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
-    align-items: flex-start; text-align: left; max-width: 760px;
+    margin: 22px auto 0; display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
+    align-items: center; text-align: left; max-width: 720px;
   }
   .cover {
-    flex: 0 0 auto; width: 176px; border-radius: 10px; overflow: hidden;
+    flex: 0 0 auto; width: 244px; max-width: 62vw; border-radius: 10px; overflow: hidden;
     border: 1px solid var(--line); background: #0c0c12;
-    min-height: 200px; display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
   }
   .cover img { display: block; width: 100%; height: auto; }
   .cover .ph {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 320px;
     font-family: "Press Start 2P", monospace; font-size: 10px; line-height: 1.9; color: var(--muted);
     padding: 16px; text-align: center;
   }
   .trailer {
-    flex: 1 1 340px; min-width: 260px; position: relative; width: 100%;
+    flex: 1 1 230px; min-width: 200px; max-width: 380px; position: relative; width: 100%;
     aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #000;
   }
   .trailer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -262,12 +263,16 @@
   .modal-x:hover { color: var(--text); border-color: var(--magenta); }
   .modal-kicker { font-family: "Press Start 2P", monospace; font-size: 11px; letter-spacing: 2px; color: var(--amber); }
   .modal-cover {
-    margin: 18px auto 16px; width: 230px; max-width: 72%;
+    margin: 18px auto 16px; width: 240px; max-width: 74%;
     border-radius: 12px; border: 1px solid var(--line); background: #0c0c12; overflow: hidden;
-    min-height: 130px; display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
   }
   .modal-cover img { display: block; width: 100%; height: auto; }
-  .modal-cover .ph { font-family: "Press Start 2P", monospace; font-size: 10px; color: var(--muted); padding: 34px 12px; line-height: 1.9; }
+  .modal-cover .ph {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 220px;
+    font-family: "Press Start 2P", monospace; font-size: 10px; color: var(--muted); padding: 20px 12px;
+    line-height: 1.9; text-align: center;
+  }
   .modal-title { font-family: "Press Start 2P", monospace; font-size: 15px; line-height: 1.55; color: #fff; }
   .modal-badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
   .modal-pitch { margin-top: 14px; color: var(--muted); font-size: 14px; }
@@ -310,8 +315,10 @@
   .cat-locked { opacity: 0.5; }
 
   @media (max-width: 520px) {
-    .cover { width: 132px; min-height: 170px; }
-    .media { gap: 12px; }
+    .cover { width: 190px; }
+    .cover .ph { min-height: 250px; }
+    .trailer { max-width: 100%; flex-basis: 100%; }
+    .media { gap: 14px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .bg-glow, .idle-line, .result.show, .modal-backdrop, .modal { animation: none; }
@@ -446,11 +453,11 @@
 
     { id:"ff6", t:"Final Fantasy VI", c:"SNES", y:1994, yt:"j_lr12kgGeU",
       p:"Elenco enorme, o vilão mais lembrado da série e uma ópera no meio do jogo." },
-    { id:"ff7", t:"Final Fantasy VII", c:"PS1", y:1997, yt:"MGkD6TjS_OI",
+    { id:"ff7", t:"Final Fantasy VII", c:"PS1", y:1997, yt:"MMOHD0B0BJU",
       p:"O RPG que levou o gênero ao mainstream do mundo inteiro." },
     { id:"ff8", t:"Final Fantasy VIII", c:"PS1", y:1999, yt:"h9e7wdCVPcs",
       p:"Jovem, estiloso e polêmico — o FF que dividiu os fãs e marcou época." },
-    { id:"ff9", t:"Final Fantasy IX", c:"PS1", y:2000, yt:"oDjplemG3Po",
+    { id:"ff9", t:"Final Fantasy IX", c:"PS1", y:2000, yt:"iUQMWeFsY8w",
       p:"Volta às raízes de fantasia medieval — o favorito de muito fã raiz." },
     { id:"fft", t:"Final Fantasy Tactics", c:"PS1", y:1997, yt:"Q0xm3Oteai8",
       p:"Tático sombrio com roteiro de intriga política digno de romance." },
@@ -464,7 +471,7 @@
     { id:"metroid-zm", t:"Metroid: Zero Mission", c:"GBA", y:2004, yt:"xjMan14CFeE",
       p:"Releitura enxuta e brilhante do Metroid original." },
 
-    { id:"sotn", t:"Castlevania: Symphony of the Night", c:"PS1", y:1997, yt:"wDE34DggEw4",
+    { id:"sotn", t:"Castlevania: Symphony of the Night", c:"PS1", y:1997, yt:"mG6-3Dthsy0",
       p:"Fundou o 'metroidvania' como a gente conhece hoje." },
     { id:"castlevania-aos", t:"Castlevania: Aria of Sorrow", c:"GBA", y:2003, yt:"ZNCfiBDjUhY",
       p:"Metroidvania portátil no auge — roube a alma de cada inimigo." },
@@ -489,7 +496,7 @@
       p:"O jogo que fundou o survival horror e aterrorizou uma geração." },
     { id:"re2", t:"Resident Evil 2", c:"PS1", y:1998, yt:"PcDjo_uKeF4", series:"re", order:2,
       p:"O ápice do survival horror clássico, com dois cenários entrelaçados." },
-    { id:"re3", t:"Resident Evil 3: Nemesis", c:"PS1", y:1999, yt:"4wlTtmr7TW8", series:"re", order:3,
+    { id:"re3", t:"Resident Evil 3: Nemesis", c:"PS1", y:1999, yt:"DAB1YPlwiB4", series:"re", order:3,
       p:"Raccoon City em chamas e um perseguidor que nunca para." },
 
     { id:"silent-hill", t:"Silent Hill", c:"PS1", y:1999, yt:"_5mZKe40zDA",
@@ -626,7 +633,7 @@
       btn.type = "button";
       btn.className = "play-poster";
       btn.setAttribute("aria-label", "Tocar vídeo de " + g.t);
-      btn.style.backgroundImage = `url('https://i.ytimg.com/vi/${g.yt}/hqdefault.jpg')`;
+      btn.style.backgroundImage = `url('https://i.ytimg.com/vi/${g.yt}/mqdefault.jpg')`;
       btn.addEventListener("click", () => playTrailer(g));
       el.trailer.replaceChildren(btn);
       el.mediaFallback.innerHTML =
