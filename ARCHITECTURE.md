@@ -1,15 +1,14 @@
 # Arquitetura
 
-Vite + TypeScript (vanilla, sem framework). Deploy estático no Vercel + **duas** funções
-serverless (`api/enrich.ts`, `api/shopee.ts`). Backend: **Supabase** (Postgres + Auth + RLS + Realtime).
+Vite + TypeScript (vanilla, sem framework). Deploy estático no Vercel + **uma** função
+serverless (`api/enrich.ts`). Backend: **Supabase** (Postgres + Auth + RLS + Realtime).
 
 Recursos externos: fontes do Google Fonts; capas da Wikipédia (via `api/enrich`); pôster e
-player de vídeo do YouTube; nota de crítica da RAWG (via `api/enrich`); dados de produto e
-link de afiliado da Shopee Affiliate API (via `api/shopee`). Todas as chaves ficam no servidor.
+player de vídeo do YouTube; nota de crítica da RAWG (via `api/enrich`, chave no servidor).
 
 ## Banco (Supabase / Postgres)
 
-`supabase/migrations/`. Sete tabelas, todas com RLS.
+`supabase/migrations/`. Oito tabelas, todas com RLS.
 
 | Tabela | O quê | Escrita liberada pra |
 |---|---|---|
@@ -20,7 +19,7 @@ link de afiliado da Shopee Affiliate API (via `api/shopee`). Todas as chaves fic
 | `rounds` | `game_id` + `status` (`jogando`→`avaliando`→`arquivada`) | só `is_admin()` |
 | `reviews` | `round_id` + `member_id` + `rating` (1–5) + `body` (≤280) | o próprio autor, **e** só se a rodada está `avaliando` |
 | `suggestions` | jogo que um membro quer (`title` + `note` + `status` pendente/aceita/recusada) | membro cria a própria; admin muda `status`; autor ou admin apaga |
-| `store_items` | console à venda (`title`, `url` afiliado, `image_url`, `price`, `rating`, `sales`, `item_id`/`shop_id`, `sort_order`, `active`) | só `is_admin()` |
+| `store_items` | item da Loja (`label`, `url` de afiliado, `image_url`, `price`, `rating`, `sales`, `sort_order`, `active`) — CRUD manual | só `is_admin()` |
 
 Leitura de `games`/`rounds`/`reviews`/`profiles`/`suggestions`/`store_items` é **pública**
 (`anon` + `authenticated`).
@@ -80,38 +79,18 @@ Capa: `en.wikipedia.org/api/rest_v1/page/summary`. Crítica: `api.rawg.io/api/ga
 (campo `metacritic`). `RAWG_API_KEY` fica só no servidor. Chamado só em ação do admin
 (criar/editar jogo, botão "re-buscar"). CRUD permite override manual da nota.
 
-## Shopee Affiliate — `lib/shopee.ts` + `api/shopee.ts`
-
-`lib/shopee.ts` (fora de `api/` pra não virar rota; importado como `../lib/shopee.js`) tem os
-helpers: assinatura
-`Authorization: SHA256 Credential=<AppId>, Timestamp=<ts>, Signature=<sha256hex(AppId+ts+body+AppSecret)>`
-(`node:crypto`, sem dependência), e as duas chamadas GraphQL a
-`open-api.affiliate.shopee.com.br/graphql` — `productOfferV2` e
-`generateShortLink(subIds:["gameclub"])` (link curto rastreável).
-
-- **`bestOfferByKeyword(kw)`** — `productOfferV2(keyword, limit:50)`, filtra os resultados
-  (descarta vendedor **cross-border** — `shopName` terminando em `.br`; todo código de modelo
-  do termo — `r36s`, `m15` — tem que estar no nome; ≥60% das outras palavras; e, se o termo não
-  menciona acessório, descarta nomes com "grip/capa/bolsa/…") e pega o **mais relevante** (a
-  Shopee já devolve nessa ordem). Nada casa → `null`. A comissão vai pra
-  `store_items.commission` só como informação.
-- **`offerByIds` / URL** — oferta de um produto específico.
-
-`api/shopee.ts` (`GET ?keyword=` | `?url=` | `?itemId=&shopId=`) expõe isso pro painel admin.
-`SHOPEE_APP_ID` / `SHOPEE_APP_SECRET` só no servidor; best-effort (falha → campos `null`).
-
-Não há cron: o admin atualiza a Loja apertando **"buscar todos agora"** no `#/admin` → Loja
-(loop client-side por `/api/shopee?keyword=` + `upsertStoreItem`; item sem resultado fica como
-está — não-destrutivo).
-
 ## Loja (consoles à venda)
+
+CRUD 100% manual, sem integração externa. `store_items`: `label`, `url` (link de afiliado),
+`image_url`, `price`, `rating`, `sales`, `sort_order`, `active`.
 
 Na home (antes do footer) vai só um **botão piscante** (`storeCtaHtml`) → `#/loja`, e só
 aparece se algum `store_items` já tem `url`. A rota `#/loja` (`lojaView`) mostra o grid
 (`storeSectionHtml`): cards dos itens ativos com `url`, ordenados por `sort_order` — foto,
 `label`, preço, `nota★ · N vendidos`, botão "Veja a Oferta". No `#/admin` → **Loja**, o admin
-edita a lista (`label`/`keyword`/`ordem`/`ativo`, tudo inline), tem **buscar** por linha e
-**buscar todos agora**, e **excluir**. Os 7 itens vêm no seed da migration. Realtime.
+edita tudo inline (salva no `blur`, sem redesenhar a tela), adiciona e exclui. Realtime.
+Migration `0004` seeda 7 rótulos como ponto de partida; `0005` tirou as colunas da antiga
+integração com a Shopee.
 
 ## Autenticação e e-mail
 
@@ -128,12 +107,7 @@ com o código de convite (`redeem_invite`) antes do `signInWithOtp`.
 ## Limitações conhecidas
 
 - **RAWG e retrô:** alguns títulos JP-only não têm `metacritic` → override manual no CRUD.
-- **`api/enrich` / `api/shopee` são abertas** (GET sem auth). Baixo risco: cacheadas, com
-  timeout, e o CRUD que as dispara é admin-only. `api/shopee` assina com o secret e consome
-  quota da Affiliate API — revisitar rate-limit se houver abuso.
-- **Shopee:** produto de vendedor não-elegível ao programa de afiliados → `productOfferV2`
-  volta vazio; o item entra com placeholder e o admin preenche na mão. Imagem da CDN Shopee
-  pode parar de carregar (hotlink) → o card cai no tile "sem foto".
+- **`api/enrich` é aberta** (proxy de dados públicos). Baixo risco; cacheada 24h.
 - **Sorteio no cliente** — ver ADR 0002.
 - **Animação de slot** parece lenta se a aba do Chrome está em segundo plano (o navegador
   estrangula `setTimeout`). Com a aba na frente são ~2s.

@@ -19,16 +19,12 @@ Já configurado por API:
 - ✅ `RAWG_API_KEY` no Vercel (production + preview + development).
 - ✅ Env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` no Vercel.
 
-### Loja (Shopee Affiliate)
+### Loja
 
-- Migration `supabase/migrations/0004_store.sql` (tabela `store_items` + os 7 itens fixos).
-  Aplicar: `node --env-file=.env.local scripts/sql.mjs supabase/migrations/0004_store.sql`.
-- Env vars **server-only** no Vercel (já configuradas, todos os ambientes): `SHOPEE_APP_ID`,
-  `SHOPEE_APP_SECRET` (painel de Afiliados da Shopee). **Foram coladas no chat — dá pra
-  rotacionar depois.** (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` também estão lá, sem uso
-  hoje.)
-- **Sem cron.** O admin atualiza a Loja quando quiser pelo botão **"buscar todos agora"** em
-  `#/admin` → Loja.
+- Migrations `supabase/migrations/0004_store.sql` (tabela `store_items` + 7 rótulos de
+  exemplo) e `0005_store_manual.sql` (tira as colunas da antiga integração Shopee).
+  Aplicar: `node --env-file=.env.local scripts/sql.mjs supabase/migrations/000X_*.sql`.
+- CRUD 100% manual no `#/admin` → Loja. Sem API externa, sem chave, sem cron.
 
 ## Falta
 

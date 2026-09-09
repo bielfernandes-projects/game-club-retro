@@ -95,12 +95,10 @@ com um comentário opcional. Não é um Jogo até o admin criar.
 ## Loja (Console à venda)
 
 Página (`#/loja`, alcançada por um botão piscante no rodapé da home) com consoles/acessórios
-retrô baratos que a galera pode comprar pra parar de jogar no PC/celular. Cada item tem um
-**nome** e um **termo de busca**; quando o **admin** aperta "buscar todos agora", a API de
-Afiliados da Shopee preenche foto, preço, nota, vendidos e um **link de afiliado** rastreável
-(subId `gameclub`, o clube ganha comissão) com o resultado **mais relevante** de vendedor
-**brasileiro** pra cada termo. Item sem resultado fica como estava. Todo campo é editável na
-mão. É público e **não faz parte do modelo de jogo** (não entra em sorteio, catálogo nem rodada).
+retrô baratos que a galera pode comprar pra parar de jogar no PC/celular. O **admin** cadastra
+cada item na mão: **nome**, **link de afiliado** (o clube ganha comissão), foto, preço, nota e
+vendidos. O card só aparece na home quando tem link. É público e **não faz parte do modelo de
+jogo** (não entra em sorteio, catálogo nem rodada).
 
 ## Inativo vs. excluído
 

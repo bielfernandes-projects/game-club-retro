@@ -34,10 +34,8 @@ emulador/ROM e a média do clube, se já foi jogado) — o mesmo pop-up do sorte
 ## Loja
 
 Botão piscante no rodapé da home → página `#/loja` com consoles/acessórios retrô à venda.
-O admin (`#/admin` → Loja) gerencia a lista de termos de busca e, no botão **"buscar todos
-agora"**, puxa da Shopee (Affiliate API, só vendedor BR, subId `gameclub`) o resultado mais
-relevante de cada termo — foto, preço, nota e link de afiliado. Item sem resultado fica como
-estava.
+O admin (`#/admin` → Loja) cadastra tudo na mão: nome, link de afiliado, foto, preço, nota e
+vendidos. O card só aparece na home quando tem link de afiliado.
 
 ## Rodar local
 

@@ -8,8 +8,7 @@ import {
 } from "./data/members";
 import { listSuggestions, setSuggestionStatus, deleteSuggestion } from "./data/suggestions";
 import {
-  listStoreItems, upsertStoreItem, setStoreItemActive, deleteStoreItem, fetchShopeeProduct,
-  type ShopeeProduct,
+  listStoreItems, upsertStoreItem, setStoreItemActive, deleteStoreItem,
 } from "./data/store";
 import { esc } from "./components";
 
@@ -232,67 +231,43 @@ async function renderSugestoes(body: HTMLElement, root: HTMLElement, onChange: (
 }
 
 // ----------------------------------------------------------------- loja
-/** Aplica no item só os campos que a Shopee devolveu preenchidos (nunca apaga com null). */
-function offerPatch(p: ShopeeProduct | null): Partial<StoreItem> {
-  const patch: Partial<StoreItem> = {};
-  if (!p) return patch;
-  if (p.link) patch.url = p.link;
-  if (p.image) patch.image_url = p.image;
-  if (p.title) patch.title = p.title;
-  if (p.price) patch.price = p.price;
-  if (p.rating != null) patch.rating = p.rating;
-  if (p.sales != null) patch.sales = p.sales;
-  if (p.commission != null) patch.commission = p.commission;
-  if (p.item_id != null) patch.item_id = p.item_id;
-  if (p.shop_id != null) patch.shop_id = p.shop_id;
-  return patch;
-}
-
 async function renderLoja(body: HTMLElement, onChange: () => void) {
   const items = await listStoreItems({ includeInactive: true });
 
   const row = (it: StoreItem) => {
     const inp = (f: keyof StoreItem, cls = "") =>
       `<input class="${cls}" data-field="${f}" value="${esc(it[f] ?? "")}">`;
-    const when = it.refreshed_at ? new Date(it.refreshed_at).toLocaleDateString("pt-BR") : "nunca";
     return `<tr data-id="${it.id}">
       <td><input type="checkbox" class="c-active" ${it.active ? "checked" : ""}></td>
       <td>${inp("sort_order", "num")}</td>
       <td>${inp("label")}</td>
-      <td>${inp("keyword")}</td>
       <td>${inp("price")}</td>
       <td>${inp("rating", "num")}</td>
       <td>${inp("sales", "num")}</td>
-      <td>${it.commission != null ? `${Number(it.commission).toFixed(1)}%` : "—"}</td>
       <td>${it.image_url ? `<img src="${esc(it.image_url)}" alt="" referrerpolicy="no-referrer" style="width:32px;height:32px;object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:4px">` : ""}${inp("image_url")}</td>
-      <td>${inp("url")}${it.url ? ` <a href="${esc(it.url)}" target="_blank" rel="noopener" style="font-size:10px">↗</a>` : ""}<br><span style="font-size:10px;color:var(--muted)">${when}</span></td>
-      <td>
-        <button class="ghost-btn s-refetch">buscar</button>
-        <button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button>
-      </td>
+      <td>${inp("url")}${it.url ? ` <a href="${esc(it.url)}" target="_blank" rel="noopener" style="font-size:10px">↗</a>` : ""}</td>
+      <td><button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button></td>
     </tr>`;
   };
 
   body.innerHTML = `
-    <p class="sub" style="margin:0 0 10px">${items.length} itens. "buscar todos agora" pega, pra cada <b>busca</b>, o resultado mais relevante de vendedor BR na Shopee (subId "gameclub"). Editar um campo salva ao sair dele; a ordem na página da Loja segue a coluna <b>ordem</b>.</p>
-    <div class="commit-row" style="margin-top:0"><button class="ghost-btn" id="s-all">buscar todos agora</button></div>
+    <p class="sub" style="margin:0 0 10px">${items.length} itens. Tudo na mão: editar um campo salva ao sair dele; a ordem na página da Loja segue a coluna <b>ordem</b>. O card só aparece na home quando tem <b>link de afiliado</b>.</p>
     <div class="table-scroll"><table class="table">
       <thead><tr>
-        <th>ativo</th><th>ordem</th><th>nome (card)</th><th>busca</th><th>preço</th><th>nota</th>
-        <th>vend.</th><th>comis.</th><th>imagem (url)</th><th>link de afiliado</th><th></th>
+        <th>ativo</th><th>ordem</th><th>nome (card)</th><th>preço</th><th>nota</th>
+        <th>vend.</th><th>imagem (url)</th><th>link de afiliado</th><th></th>
       </tr></thead>
       <tbody id="s-rows">${items.map(row).join("")}</tbody>
     </table></div>
     <h2 class="section">Novo item</h2>
-    <p class="sub" style="margin:0 0 8px">Só o <b>nome</b> é obrigatório. Cole um <b>link da Shopee</b> pra puxar foto/preço/etc, ou preencha os campos na mão. O que você digitar aqui manda por cima do que a Shopee devolver. (O "termo de busca" pra atualização automática dá pra pôr depois, na linha da tabela.)</p>
+    <p class="sub" style="margin:0 0 8px">Só o <b>nome</b> é obrigatório. O resto dá pra deixar em branco e preencher depois na linha da tabela.</p>
     <div class="form-grid">
       <label>nome no card *<input id="s-label" placeholder="ex: Console R36S"></label>
-      <label style="grid-column:1/-1">link do produto na Shopee<input id="s-link" placeholder="https://shopee.com.br/... ou https://s.shopee.com.br/..."></label>
       <label>preço<input id="s-price" placeholder="R$ 0,00"></label>
-      <label>nota (0–5)<input id="s-rating" type="number" step="0.1" min="0" max="5"></label>
-      <label>vendidos<input id="s-sales" type="number" min="0"></label>
+      <label>nota (0–5)<input id="s-rating" placeholder="ex: 4.8"></label>
+      <label>vendidos<input id="s-sales" placeholder="ex: 2300"></label>
       <label style="grid-column:1/-1">url da imagem<input id="s-img" placeholder="https://..."></label>
-      <label style="grid-column:1/-1">link de afiliado (fica no botão do card)<input id="s-url" placeholder="https://s.shopee.com.br/..."></label>
+      <label style="grid-column:1/-1">link de afiliado (fica no botão do card)<input id="s-url" placeholder="https://..."></label>
     </div>
     <div class="commit-row"><button class="commit-btn" id="s-add">ADICIONAR</button></div>
     <div class="err" id="store-err" hidden></div>`;
@@ -303,15 +278,14 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
     err.hidden = false;
   };
 
-  // redesenha só o painel da Loja, mantendo a rolagem — sem chamar onChange (que recarrega
-  // a página toda e joga o admin lá pra cima).
+  // redesenha só o painel da Loja, mantendo a rolagem.
   const rerender = async () => {
     const y = window.scrollY;
     await renderLoja(body, onChange);
     window.scrollTo(0, y);
   };
 
-  // edição inline: salva no banco em silêncio, não mexe na tela (o valor já está no input).
+  // edição inline: salva no banco em silêncio, não mexe na tela.
   const save = async (id: string, patch: Partial<StoreItem>) => {
     const it = items.find((x) => x.id === id)!;
     Object.assign(it, patch);
@@ -334,43 +308,13 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
         if (f === "sort_order") v = Number(raw) || 0;
         else if (f === "rating") v = raw === "" ? null : Number(raw.replace(",", "."));
         else if (f === "sales") v = raw === "" ? null : Number(raw.replace(/\D/g, ""));
-        else if (f === "price" || f === "keyword" || f === "image_url" || f === "url")
-          v = raw === "" ? null : raw;
+        else if (f === "price" || f === "image_url" || f === "url") v = raw === "" ? null : raw;
         if ((f === "url" || f === "image_url") && v && !/^https?:\/\//i.test(v as string)) {
           showErr(`${f}: precisa começar com http:// ou https://`);
           return;
         }
         save(id, { [f]: v } as Partial<StoreItem>).catch((e) => showErr((e as Error).message));
       });
-    });
-    tr.querySelector<HTMLButtonElement>(".s-refetch")?.addEventListener("click", async (e) => {
-      const btn = e.currentTarget as HTMLButtonElement;
-      const it = items.find((x) => x.id === id)!;
-      const ref = it.keyword
-        ? { keyword: it.keyword }
-        : it.item_id != null && it.shop_id != null
-          ? { itemId: it.item_id, shopId: it.shop_id }
-          : null;
-      if (!ref) {
-        showErr(`"${it.label}": defina um termo de busca primeiro.`);
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = "…";
-      try {
-        const patch = offerPatch(await fetchShopeeProduct(ref));
-        if (Object.keys(patch).length) {
-          patch.refreshed_at = new Date().toISOString();
-          await upsertStoreItem({ ...it, ...patch });
-        } else {
-          showErr(`"${it.label}": nada encontrado agora (mantive o que tinha).`);
-        }
-        await rerender();
-      } catch (ex) {
-        showErr((ex as Error).message);
-        btn.disabled = false;
-        btn.textContent = "buscar";
-      }
     });
     tr.querySelector(".c-del")?.addEventListener("click", async () => {
       if (!confirm("Excluir esse item da loja?")) return;
@@ -383,27 +327,6 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
     });
   });
 
-  body.querySelector<HTMLButtonElement>("#s-all")?.addEventListener("click", async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = "buscando…";
-    let miss = 0;
-    for (const it of items) {
-      if (!it.keyword) continue;
-      try {
-        const patch = offerPatch(await fetchShopeeProduct({ keyword: it.keyword }));
-        if (Object.keys(patch).length) {
-          patch.refreshed_at = new Date().toISOString();
-          await upsertStoreItem({ ...it, ...patch });
-        } else miss++;
-      } catch {
-        miss++;
-      }
-    }
-    if (miss) showErr(`${miss} item(ns) sem resultado agora — os antigos foram mantidos.`);
-    await rerender();
-  });
-
   body.querySelector("#s-add")?.addEventListener("click", async () => {
     const val = (id: string) => (body.querySelector(`#${id}`) as HTMLInputElement).value.trim();
     const label = val("s-label");
@@ -411,8 +334,7 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
       showErr("Dá um nome pro card.");
       return;
     }
-    const prodLink = val("s-link");
-    for (const [id, name] of [["s-link", "link do produto"], ["s-img", "url da imagem"], ["s-url", "link de afiliado"]] as const) {
+    for (const [id, name] of [["s-img", "url da imagem"], ["s-url", "link de afiliado"]] as const) {
       const v = val(id);
       if (v && !/^https?:\/\//i.test(v)) {
         showErr(`${name}: precisa começar com http:// ou https://`);
@@ -421,30 +343,18 @@ async function renderLoja(body: HTMLElement, onChange: () => void) {
     }
     const btn = body.querySelector("#s-add") as HTMLButtonElement;
     btn.disabled = true;
-    btn.textContent = "salvando…";
     try {
-      // 1) base: se colou um link, puxa da Shopee
-      let base: Partial<StoreItem> = {};
-      if (prodLink) base = offerPatch(await fetchShopeeProduct({ url: prodLink }).catch(() => null));
-      if (Object.keys(base).length) base.refreshed_at = new Date().toISOString();
-      // 2) overrides manuais (só o que foi digitado)
-      const man: Partial<StoreItem> = {};
-      if (val("s-price")) man.price = val("s-price");
-      if (val("s-rating")) man.rating = Number(val("s-rating").replace(",", "."));
-      if (val("s-sales")) man.sales = Number(val("s-sales").replace(/\D/g, ""));
-      if (val("s-img")) man.image_url = val("s-img");
-      if (val("s-url")) man.url = val("s-url");
-      await upsertStoreItem({
-        label,
-        sort_order: items.length,
-        ...base,
-        ...man,
-      });
+      const item: Partial<StoreItem> & { label: string } = { label, sort_order: items.length };
+      if (val("s-price")) item.price = val("s-price");
+      if (val("s-rating")) item.rating = Number(val("s-rating").replace(",", "."));
+      if (val("s-sales")) item.sales = Number(val("s-sales").replace(/\D/g, ""));
+      if (val("s-img")) item.image_url = val("s-img");
+      if (val("s-url")) item.url = val("s-url");
+      await upsertStoreItem(item);
       await rerender();
     } catch (ex) {
       showErr((ex as Error).message);
       btn.disabled = false;
-      btn.textContent = "ADICIONAR";
     }
   });
 }
