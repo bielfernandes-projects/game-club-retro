@@ -18,16 +18,18 @@ export async function listReviews(roundId: string): Promise<ReviewWithAuthor[]> 
   });
 }
 
-/** Média das notas por round_id, para o catálogo. */
+/** Média das notas do clube por **game_id** (via join com rounds), pro catálogo. */
 export async function reviewAverages(): Promise<Map<string, { avg: number; n: number }>> {
-  const { data, error } = await supabase.from("reviews").select("round_id, rating");
+  const { data, error } = await supabase.from("reviews").select("rating, rounds(game_id)");
   if (error) throw error;
   const acc = new Map<string, { sum: number; n: number }>();
-  for (const r of (data ?? []) as { round_id: string; rating: number }[]) {
-    const cur = acc.get(r.round_id) ?? { sum: 0, n: 0 };
+  for (const r of (data ?? []) as { rating: number; rounds: { game_id: string } | null }[]) {
+    const gid = r.rounds?.game_id;
+    if (!gid) continue;
+    const cur = acc.get(gid) ?? { sum: 0, n: 0 };
     cur.sum += r.rating;
     cur.n += 1;
-    acc.set(r.round_id, cur);
+    acc.set(gid, cur);
   }
   return new Map([...acc].map(([k, v]) => [k, { avg: v.sum / v.n, n: v.n }]));
 }
