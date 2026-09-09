@@ -416,7 +416,13 @@ function openModal(
         <div class="modal-actions">${cta}</div>
       </div>
     </div>`;
-  const close = () => (modalRoot.innerHTML = "");
+  document.documentElement.classList.add("modal-open");
+  document.body.classList.add("modal-open");
+  const close = () => {
+    modalRoot.innerHTML = "";
+    document.documentElement.classList.remove("modal-open");
+    document.body.classList.remove("modal-open");
+  };
   modalRoot.querySelector("#mx")?.addEventListener("click", close);
   modalRoot.querySelector("#mok")?.addEventListener("click", close);
   modalRoot.querySelector(".play-poster")?.addEventListener("click", (e) => {
