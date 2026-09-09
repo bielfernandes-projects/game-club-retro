@@ -11,21 +11,24 @@ Já configurado por API:
 - ✅ Schema + RLS + hooks + realtime + seed (49 jogos + admin `gabriel.fernandeshw@gmail.com`).
 - ✅ Auth: Site URL + redirect URLs (`gameclub.bf.dev.br`, localhost, previews).
 - ✅ SMTP via **Resend** (remetente `Game Club Retrô <clube@bf.dev.br>`, domínio verificado).
-  Rate limit de e-mail: 100/h. Template do magic link em
-  [`supabase/email-magiclink.html`](supabase/email-magiclink.html) — colar em
-  **Authentication → Email Templates → Magic Link** (o painel é a única via: a
-  Management API recusa o token atual com 403).
+  Rate limit de e-mail: **100/h**. Template do magic link aplicado pelo painel a partir de
+  [`supabase/email-magiclink.html`](supabase/email-magiclink.html) — editar lá e recolar em
+  **Authentication → Emails → Templates → Magic Link** (a Management API recusa o token
+  atual com 403, então é sempre pelo painel).
 - ✅ Hook **before-user-created** ligado → e-mail fora da allowlist não cria conta.
 - ✅ `RAWG_API_KEY` no Vercel (production + preview + development).
 - ✅ Env vars `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` no Vercel.
 
 ## Falta
 
-1. **Você:** deletar os projetos Supabase que não são o `wikbubnxkxazzsikhelo`:
-   - `hkpqfpzuravrxhoyovzq` (o que você criou à mão).
-   - Se o do Marketplace (`zplbyolguhodemmpzgvl`) ainda aparecer no dashboard, some sozinho —
-     a resource foi removida do Vercel.
-2. **Claude:** testar a preview (login como admin, sorteio, avaliação) → merge pra `main`.
+1. **Você:** deletar os projetos Supabase que não são o `wikbubnxkxazzsikhelo`
+   (`hkpqfpzuravrxhoyovzq`, e o do Marketplace `zplbyolguhodemmpzgvl` se ainda aparecer).
+2. **Você (quando puder):** trocar o `SUPABASE_ACCESS_TOKEN` por um com acesso de owner à org
+   `castordosgames` — o atual dá 403 na Management API, então mudança de config de Auth
+   (templates, rate limits, SMTP) só dá pra fazer pelo painel.
+
+O app já está no ar e em uso: login por magic link, sorteio, avaliações e indicações
+testados ponta a ponta.
 
 ## Segredos (guardados fora do git)
 

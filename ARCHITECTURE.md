@@ -74,6 +74,18 @@ Capa: `en.wikipedia.org/api/rest_v1/page/summary`. Crítica: `api.rawg.io/api/ga
 (campo `metacritic`). `RAWG_API_KEY` fica só no servidor. Chamado só em ação do admin
 (criar/editar jogo, botão "re-buscar"). CRUD permite override manual da nota.
 
+## Autenticação e e-mail
+
+Login é **magic link** (`signInWithOtp`, `flowType: "implicit"`). O e-mail sai pelo **Resend**
+(SMTP custom no Supabase, remetente `Game Club Retrô <clube@bf.dev.br>`, domínio verificado),
+com rate limit de 100/h. O template vive versionado em `supabase/email-magiclink.html` e é
+aplicado pelo painel (a Management API recusa o access token atual com 403).
+
+A tela `#/entrar` trava o botão "MANDAR LINK" por 60s após o envio e traduz o erro de rate
+limit — sem isso, cliques repetidos queimam a cota e voltam como "email rate limit exceeded".
+Fora da allowlist, o hook `before-user-created` impede a criação da conta; membro novo entra
+com o código de convite (`redeem_invite`) antes do `signInWithOtp`.
+
 ## Limitações conhecidas
 
 - **RAWG e retrô:** alguns títulos JP-only não têm `metacritic` → override manual no CRUD.
