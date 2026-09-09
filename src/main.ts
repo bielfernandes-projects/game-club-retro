@@ -549,7 +549,23 @@ function loginView(inviteCode?: string | null): HTMLElement {
       <div class="toast" id="lg-msg"></div>
     </div>`,
   );
-  el.querySelector("#send")?.addEventListener("click", async () => {
+  const btn = el.querySelector("#send") as HTMLButtonElement;
+  const cooldown = (secs: number) => {
+    btn.disabled = true;
+    let left = secs;
+    const label = () => (btn.textContent = left > 0 ? `AGUARDE ${left}s` : "MANDAR LINK");
+    label();
+    const t = setInterval(() => {
+      left -= 1;
+      label();
+      if (left <= 0) {
+        clearInterval(t);
+        btn.disabled = false;
+      }
+    }, 1000);
+  };
+
+  btn.addEventListener("click", async () => {
     const email = (el.querySelector("#email") as HTMLInputElement).value.trim();
     const code = (el.querySelector("#code") as HTMLInputElement).value.trim();
     const msg = el.querySelector("#lg-msg") as HTMLElement;
@@ -557,23 +573,34 @@ function loginView(inviteCode?: string | null): HTMLElement {
       msg.textContent = "E-mail inválido.";
       return;
     }
+    btn.disabled = true;
     msg.textContent = "Enviando...";
     try {
       if (code) {
         const ok = await redeemInvite(email, code);
         if (!ok) {
           msg.textContent = "Código de convite inválido.";
+          btn.disabled = false;
           return;
         }
       }
       const { error } = await sendMagicLink(email);
-      msg.textContent = error
-        ? error.message.includes("not on the")
-          ? "Esse e-mail ainda não é do clube. Use um código de convite."
-          : "Erro: " + error.message
-        : "Link enviado! Confere seu e-mail (e o spam).";
+      if (!error) {
+        msg.textContent = "Link enviado! Confere seu e-mail (e o spam). Pode fechar essa aba.";
+        cooldown(60);
+      } else if (/not on the|allowlist/i.test(error.message)) {
+        msg.textContent = "Esse e-mail ainda não é do clube. Use um código de convite.";
+        btn.disabled = false;
+      } else if (/rate limit|too many|60 seconds/i.test(error.message)) {
+        msg.textContent = "Muitos pedidos seguidos. Espera 1 minuto e tenta de novo (ou olha se o link anterior já chegou).";
+        cooldown(60);
+      } else {
+        msg.textContent = "Erro: " + error.message;
+        btn.disabled = false;
+      }
     } catch (e) {
       msg.textContent = "Erro: " + (e as Error).message;
+      btn.disabled = false;
     }
   });
   return el;
