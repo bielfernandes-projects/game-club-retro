@@ -156,7 +156,7 @@ async function renderJogos(body: HTMLElement, onChange: () => void) {
           let v: unknown = inp.value.trim();
           if (f === "year" || f === "series_order" || f === "critic_score")
             v = v === "" ? null : Number(v);
-          if (f === "series" && v === "") v = null;
+          if ((f === "series" || f === "cover_url") && v === "") v = null;
           if (f === "critic_score") save(id, { critic_score: v as number, critic_source: "manual" });
           else save(id, { [f]: v } as Partial<Game>);
         });
@@ -245,7 +245,7 @@ function rowHtml(g: Game): string {
     <td>${inp("series_order", "num")}</td>
     <td>${inp("wiki_title")}</td>
     <td>${inp("critic_score", "num")}${g.critic_source ? `<small> (${g.critic_source})</small>` : ""}</td>
-    <td>${g.cover_url ? "✓" : "—"}</td>
+    <td>${g.cover_url ? `<img src="${esc(g.cover_url)}" alt="" referrerpolicy="no-referrer" style="width:28px;height:28px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:4px">` : ""}${inp("cover_url")}</td>
     <td><button class="ghost-btn c-del" style="border-color:rgba(255,46,136,.4);color:var(--magenta)">excluir</button></td>
   </tr>`;
 }
